@@ -19,9 +19,6 @@ using Steamworks;
 using Cove.GodotFormat;
 using Cove.Server.Utils;
 using Cove.Server.Actor;
-using System.Diagnostics;
-using System.Runtime.InteropServices;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace Cove.Server
 {
@@ -40,34 +37,21 @@ namespace Cove.Server
 
         public void sendPacketToPlayers(Dictionary<string, object> packet)
         {
+            byte[] packetBytes = writePacket(packet);
+            
             foreach (CSteamID player in getAllPlayers())
             {
                 if (player == SteamUser.GetSteamID())
                     continue;
                 
-                sendPacketToPlayer(packet, player);
+                SteamNetworking.SendP2PPacket(player, packetBytes, (uint)packetBytes.Length, EP2PSend.k_EP2PSendReliable, nChannel: 2);
             }
         }
 
         public void sendPacketToPlayer(Dictionary<string, object> packet, CSteamID id)
         {
             byte[] packetBytes = writePacket(packet);
-            
-            // get the wfPlayer object
-            var player = AllPlayers.Find(p => p.SteamId.m_SteamID == id.m_SteamID);
-            if (player == null) return;
-
-            if (player.identity.GetSteamID64() == 0)
-            {
-                return;
-            }
-
-            GCHandle handle = GCHandle.Alloc(packetBytes, GCHandleType.Pinned);
-            IntPtr dataPointer = handle.AddrOfPinnedObject();
-
-            SteamNetworkingMessages.SendMessageToUser(ref player.identity, dataPointer, (uint)packetBytes.Length, 8, 2);
-
-            handle.Free(); // free the handle
+            SteamNetworking.SendP2PPacket(id, packetBytes, (uint)packetBytes.Length, EP2PSend.k_EP2PSendReliable, nChannel: 2);
         }
 
         public CSteamID[] getAllPlayers()
@@ -84,79 +68,5 @@ namespace Cove.Server
 
             return players;
         }
-
-        public class NetworkingMessage
-        {
-            public byte[] payload { get; set; }
-            public int size { get; set; }
-            //public CSteamID connection { get; set; }
-            public ulong identity { get; set; }
-            public ulong receiver_user_data { get; set; }
-            public ulong time_received { get; set; }
-            public ulong message_number { get; set; }
-            public int channel { get; set; }
-            public int flags { get; set; }
-            public ulong sender_user_data { get; set; }
-        }
-
-        public List<NetworkingMessage> ReceiveMessagesOnChannel(int channel, int maxMessages)
-        {
-            List<NetworkingMessage> messages = new List<NetworkingMessage>();
-
-            nint[] messagePointers = new nint[maxMessages];
-
-            int availableMessages = SteamNetworkingMessages.ReceiveMessagesOnChannel(channel, messagePointers, maxMessages);
-
-            for (int i = 0; i < availableMessages; i++)
-            {
-                SteamNetworkingMessage_t message = Marshal.PtrToStructure<SteamNetworkingMessage_t>(messagePointers[i]);
-
-                byte[] data = new byte[message.m_cbSize];
-                Marshal.Copy(message.m_pData, data, 0, message.m_cbSize);
-
-                /*
-                Dictionary<string, object> msgDict = new Dictionary<string, object>
-                {
-                    { "payload", data }, // Message payload
-                    { "size", message.m_cbSize },
-                    { "connection", message.m_conn.ToString() },
-                    { "identity", GetSteamIDFromIdentity(message.m_identityPeer) },
-                    { "receiver_user_data", (ulong)message.m_nConnUserData },
-                    { "time_received", (ulong)message.m_usecTimeReceived.m_SteamNetworkingMicroseconds },
-                    { "message_number", (ulong)message.m_nMessageNumber },
-                    { "channel", message.m_nChannel },
-                    { "flags", message.m_nFlags },
-                    { "sender_user_data", (ulong)message.m_nUserData }
-                }
-                */
-
-                NetworkingMessage msgDict = new()
-                {
-                    payload = data,
-                    size = message.m_cbSize,
-                    //connection = ((uint)message.m_conn),
-                    identity = GetSteamIDFromIdentity(message.m_identityPeer),
-                    receiver_user_data = (ulong)message.m_nConnUserData,
-                    time_received = (ulong)message.m_usecTimeReceived.m_SteamNetworkingMicroseconds,
-                    message_number = (ulong)message.m_nMessageNumber,
-                    channel = message.m_nChannel,
-                    flags = message.m_nFlags,
-                    sender_user_data = (ulong)message.m_nUserData
-                };
-
-                messages.Add(msgDict);
-                SteamNetworkingMessage_t.Release(messagePointers[i]);
-            }
-
-            return messages;
-        }
-
-        // Helper function to get SteamID from identity
-        private ulong GetSteamIDFromIdentity(SteamNetworkingIdentity identity)
-        {
-            return identity.GetSteamID64(); // Return 0 if no SteamID found
-        }
-
     }
-
 }

@@ -31,18 +31,9 @@ namespace Cove.Server
         public void banPlayer(CSteamID id, bool saveToFile = false)
         {
             Dictionary<string, object> banPacket = new();
-            banPacket["type"] = "client_was_banned";
+            banPacket["type"] = "ban";
+
             sendPacketToPlayer(banPacket, id);
-
-            // get the wfPlayer object
-            var player = AllPlayers.Find(p => p.SteamId.m_SteamID == id.m_SteamID);
-            SteamNetworkingMessages.CloseSessionWithUser(ref player.identity);
-
-            Dictionary<string, object> leftPacket = new();
-            leftPacket["type"] = "user_left_weblobby";
-            leftPacket["user_id"] = (long)id.m_SteamID;
-            leftPacket["reason"] = (int)2;
-            sendPacketToPlayers(leftPacket);
 
             if (saveToFile)
                 writeToBansFile(id);

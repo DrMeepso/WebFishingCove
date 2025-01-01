@@ -99,10 +99,6 @@ namespace Cove.Server
                             {
                                 thisPlayer.InstanceID = actorID;
                                 allActors.Add(thisPlayer); // add the player to the actor list
-
-                                // print out a join message
-                                Log($"[{thisPlayer.SteamId.m_SteamID}] {thisPlayer.Username} joined the server");
-
                             }
 
                         } else {
