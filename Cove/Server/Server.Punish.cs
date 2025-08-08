@@ -27,9 +27,23 @@ namespace Cove.Server
 {
     public partial class CoveServer
     {
-
-        public void banPlayer(CSteamID id, bool saveToFile = false)
+        public void banPlayer(CSteamID id, bool saveToFile = false, string banReason = "")
         {
+            if (!string.IsNullOrEmpty(banReason))
+            {
+                SendLetter(
+                    id,
+                    SteamMatchmaking.GetLobbyOwner(this.SteamLobby),
+                    "BANNED",
+                    $"""
+                    Sorry! You have been banned from the server!
+                    Reason: {banReason}
+                    """,
+                    "Best wishes,\nAdmin Team",
+                    AllPlayers.Find(p => p.SteamId == id)?.Username ?? "Banned User"
+                );
+            }
+
             Dictionary<string, object> banPacket = new();
             banPacket["type"] = "client_was_banned";
             sendPacketToPlayer(banPacket, id);
