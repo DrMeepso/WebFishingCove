@@ -1,0 +1,29 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <OutputType>Library</OutputType>
+  </PropertyGroup>
+
+  <!-- Embed the plugin manifest so Cove can read it at runtime -->
+  <ItemGroup>
+    <EmbeddedResource Include="plugin.cfg" />
+  </ItemGroup>
+
+  <!-- Prefer a project reference since PluginsCustom lives inside the WebFishingCove solution -->
+  <ItemGroup>
+    <ProjectReference Include="..\Cove\Cove.csproj" />
+  </ItemGroup>
+
+  <!-- Optional: copy the built DLL to a local Plugins folder next to the server exe.
+       Adjust ServerOutDir to your actual Cove server output path. -->
+  <PropertyGroup>
+    <ServerOutDir>..\Cove\bin\Debug\net8.0</ServerOutDir>
+  </PropertyGroup>
+  <Target Name="PostBuildCopy" AfterTargets="Build">
+    <Message Text="Copying plugin to $(ServerOutDir)\Plugins" Importance="high" />
+    <MakeDir Directories="$(ServerOutDir)\Plugins" />
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(ServerOutDir)\Plugins" />
+  </Target>
+</Project>
