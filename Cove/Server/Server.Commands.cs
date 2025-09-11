@@ -106,7 +106,29 @@ namespace Cove.Server
                 if (!isPlayerAdmin(player.SteamId)) return;
                 // hacky fix,
                 // Extract player name from the command message
-                string playerIdent = string.Join(" ", args);
+                string playerIdent;// = string.Join(" ", args);
+                
+                string rawArgs = string.Join(" ", args);
+                string banReason = string.Empty;
+
+                var numQuotesInArgs = rawArgs.Count(c => c == '"');
+                var hasBanReason = numQuotesInArgs >= 2;
+                // While we'd hope admins use delimiters properly, it's actually totally fine for this case if they
+                // e.g. use quotes inside quotes to quote the target's offending message within the banReason
+                if (hasBanReason)
+                {
+                    var firstQuoteIndex = rawArgs.IndexOf('"');
+                    var lastQuoteIndex = rawArgs.LastIndexOf('"');
+                    banReason = rawArgs
+                        .Substring(firstQuoteIndex + 1, lastQuoteIndex - firstQuoteIndex - 1)
+                        .Trim();
+                    rawArgs = rawArgs.Remove(
+                        firstQuoteIndex,
+                        lastQuoteIndex - firstQuoteIndex + 1
+                    );
+                }
+                playerIdent = rawArgs.Trim();
+                
                 // try to find a user with the username first
                 var playerToBan = GetPlayer(playerIdent);
                 
@@ -133,9 +155,9 @@ namespace Cove.Server
                     // if it is a steam ID, try to find the player by steam ID
                     CSteamID steamId = new CSteamID(Convert.ToUInt64(playerIdent));
                     if (isPlayerBanned(steamId))
-                        banPlayer(steamId);
+                        banPlayer(steamId, false, banReason);
                     else
-                        banPlayer(steamId, true);
+                        banPlayer(steamId, true, banReason); // save to file if they are not already in there!
                     
                     messagePlayer($"Banned player with Steam ID {playerIdent}", player.SteamId);
                     return;
@@ -149,15 +171,15 @@ namespace Cove.Server
                 {
 
                     if (isPlayerBanned(playerToBan.SteamId))
-                        banPlayer(playerToBan.SteamId);
+                        banPlayer(playerToBan.SteamId, false, banReason);
                     else
-                        banPlayer(playerToBan.SteamId, true); // save to file if they are not already in there!
+                        banPlayer(playerToBan.SteamId, true, banReason); // save to file if they are not already in there!
 
                     messagePlayer($"Banned {playerToBan.Username}", player.SteamId);
                     messageGlobal($"{playerToBan.Username} has been banned from the server.");
                 }
             });
-            SetCommandDescription("ban", "Bans a player from the server");
+            SetCommandDescription("ban", "Usage: !ban (username|steamID|FisherID) \"Reason for ban\"");
 
             RegisterCommand("prev", (player, args) =>
             {
