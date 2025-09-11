@@ -34,13 +34,13 @@ namespace Cove.Server
     {
         List<RegisteredCommand> Commands = [];
 
-        public WFPlayer GetPlayer(string playerIdent)
+        public WFPlayer? GetPlayer(string playerIdent)
         {
             var selectedPlayer = AllPlayers.ToList().Find(p => p.Username.Equals(playerIdent, StringComparison.OrdinalIgnoreCase));
             // if there is no player with the username try to find someone with that fisher ID
             if (selectedPlayer == null)
                 selectedPlayer = AllPlayers.ToList().Find(p => p.FisherID.Equals(playerIdent, StringComparison.OrdinalIgnoreCase));
-                
+            
             return selectedPlayer;
         }
         
@@ -127,13 +127,17 @@ namespace Cove.Server
                         lastQuoteIndex - firstQuoteIndex + 1
                     );
                 }
+                else if (rawArgs.Length > 2)
+                {
+                    messagePlayer("Error banning player: If you want to add a reason, please wrap it in quotes.", player.SteamId);
+                }
                 playerIdent = rawArgs.Trim();
                 
                 // try to find a user with the username first
                 var playerToBan = GetPlayer(playerIdent);
                 
                 var previousPlayer = PreviousPlayers.ToList().Find(p => p.FisherID.Equals(playerIdent, StringComparison.OrdinalIgnoreCase));
-                if (previousPlayer != null)
+                if (previousPlayer != null && playerToBan == null)
                 {
                     messagePlayer($"There is a previous player with that name, if you meant to ban them add a # before the ID: #{playerIdent}", player.SteamId);
                     return;
