@@ -16,11 +16,15 @@ namespace Cove.Server
         public string Command;
         public string Description;
         public Action<WFPlayer, string[]> Callback;
-        public RegisteredCommand(string command, string description, Action<WFPlayer, string[]> callback)
+        public string[] Aliases;
+
+        public RegisteredCommand(string command, string description, Action<WFPlayer, string[]> callback, string[]? aliases = null)
         {
             Command = command.ToLower(); // make sure its lower case to not mess anything up
             Description = description;
             Callback = callback;
+            Aliases = aliases ?? [];
+            Aliases = [.. Aliases.Select(alias => alias.ToLower())];
         }
 
         public void Invoke(WFPlayer player, string[] args)
@@ -40,10 +44,10 @@ namespace Cove.Server
             // if there is no player with the username try to find someone with that fisher ID
             if (selectedPlayer == null)
                 selectedPlayer = AllPlayers.ToList().Find(p => p.FisherID.Equals(playerIdent, StringComparison.OrdinalIgnoreCase));
-                
+
             return selectedPlayer;
         }
-        
+
         public void RegisterDefaultCommands()
         {
             RegisterCommand("help", (player, args) =>
@@ -58,7 +62,7 @@ namespace Cove.Server
             });
             SetCommandDescription("help", "Shows all commands");
 
-            RegisterCommand("exit", (player, args) =>
+            RegisterCommand(command: "exit", aliases: ["shutdown"], cb: (player, args) =>
             {
                 // make sure the player is the host
                 if (player.SteamId != serverPlayer.SteamId)
@@ -79,7 +83,7 @@ namespace Cove.Server
                 string playerIdent = string.Join(" ", args);
                 // try find a user with the username first
                 var kickedplayer = GetPlayer(playerIdent);
-                
+
                 if (kickedplayer == null && System.Text.RegularExpressions.Regex.IsMatch(playerIdent, @"^7656119\d{10}$"))
                 {
                     // if it is a steam ID, try to find the player by steam ID
@@ -88,10 +92,10 @@ namespace Cove.Server
                     kickPlayer(steamId);
                     return;
                 }
-                
+
                 if (kickedplayer == null)
                 {
-                    messagePlayer("That's not a player!" , player.SteamId);
+                    messagePlayer("That's not a player!", player.SteamId);
                 }
                 else
                 {
@@ -109,14 +113,14 @@ namespace Cove.Server
                 string playerIdent = string.Join(" ", args);
                 // try to find a user with the username first
                 var playerToBan = GetPlayer(playerIdent);
-                
+
                 var previousPlayer = PreviousPlayers.ToList().Find(p => p.FisherID.Equals(playerIdent, StringComparison.OrdinalIgnoreCase));
                 if (previousPlayer != null)
                 {
                     messagePlayer($"There is a previous player with that name, if you meant to ban them add a # before the ID: #{playerIdent}", player.SteamId);
                     return;
                 }
-                    
+
                 previousPlayer = PreviousPlayers.ToList().Find(p => $"#{p.FisherID}".Equals(playerIdent, StringComparison.OrdinalIgnoreCase));
                 if (previousPlayer != null)
                 {
@@ -126,7 +130,7 @@ namespace Cove.Server
                         Username = previousPlayer.Username,
                     };
                 }
-                
+
                 // use regex to check if its a steam ID
                 if (playerToBan == null && System.Text.RegularExpressions.Regex.IsMatch(playerIdent, @"^7656119\d{10}$"))
                 {
@@ -136,11 +140,11 @@ namespace Cove.Server
                         banPlayer(steamId);
                     else
                         banPlayer(steamId, true);
-                    
+
                     messagePlayer($"Banned player with Steam ID {playerIdent}", player.SteamId);
                     return;
                 }
-                
+
                 if (playerToBan == null)
                 {
                     messagePlayer("Player not found!", player.SteamId);
@@ -159,7 +163,7 @@ namespace Cove.Server
             });
             SetCommandDescription("ban", "Bans a player from the server");
 
-            RegisterCommand("prev", (player, args) =>
+            RegisterCommand(command:"prev", aliases: ["recent"], cb: (player, args) =>
             {
                 if (!isPlayerAdmin(player.SteamId)) return;
                 var sb = new StringBuilder();
@@ -174,7 +178,7 @@ namespace Cove.Server
                     {
                         continue;
                     }
-                    
+
                     // get the time since the player left in a human readable format
                     string timeLeft =
                         $"{Math.Round((DateTime.UtcNow - DateTimeOffset.FromUnixTimeSeconds(prevPlayer.leftTimestamp).UtcDateTime).TotalMinutes)} minutes ago";
@@ -183,19 +187,25 @@ namespace Cove.Server
                 messagePlayer(sb.ToString(), player.SteamId);
             });
             SetCommandDescription("prev", "Shows a list of previous players that were connected to the server");
-            
+
         }
 
-        public void RegisterCommand(string command, Action<WFPlayer, string[]> cb)
+        public void RegisterCommand(string command, Action<WFPlayer, string[]> cb, string[]? aliases = null)
         {
+            aliases ??= [];
 
             if (Commands.Any(c => c.Command == command))
             {
                 Log($"Command '{command}' is already registerd!");
                 return;
             }
+            else if (aliases.Any(alias => Commands.Find(c => c.Aliases.Contains(alias)) != null))
+            {
+                Log($"'{command}' has an alias that is already registerd elsewhere!");
+                return;
+            }
 
-            Commands.Add(new RegisteredCommand(command, "", cb));
+            Commands.Add(new RegisteredCommand(command, "", cb, aliases));
 
         }
 
@@ -217,7 +227,7 @@ namespace Cove.Server
 
         public void InvokeCommand(WFPlayer player, string command, string[] args)
         {
-            var cmd = Commands.Find(c => c.Command == command);
+            var cmd = FindCommand(command);
             if (cmd == null)
             {
                 Log($"Command '{command}' not found!");
@@ -228,11 +238,18 @@ namespace Cove.Server
 
         public bool DoseCommandExist(string command)
         {
-            var cmd = Commands.Find(c => c.Command == command);
+            var cmd = FindCommand(command);
             if (cmd == null)
                 return false;
 
             return true;
+        }
+
+        public RegisteredCommand? FindCommand(string name)
+        {
+            return Commands.Find(c =>
+                c.Command == name.ToLower() || c.Aliases.Contains(name.ToLower())
+            );
         }
     }
 }

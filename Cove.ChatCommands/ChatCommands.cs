@@ -2,7 +2,6 @@
 using Cove.Server.Actor;
 using Cove.Server.Plugins;
 using Steamworks;
-using System;
 
 public class ChatCommands : CovePlugin
 {
@@ -19,7 +18,7 @@ public class ChatCommands : CovePlugin
     {
         base.onInit();
 
-        RegisterCommand("users", (player, args) =>
+        RegisterCommand(command: "users", aliases: ["players"], callback: (player, args) =>
         {
             if (!IsPlayerAdmin(player)) return;
             // Get the command arguments
@@ -187,7 +186,7 @@ public class ChatCommands : CovePlugin
         });
         SetCommandDescription("say", "Sends a message to all players");
 
-        RegisterCommand("chalkrecent", (player, args) =>
+        RegisterCommand(command: "chalkrecent", aliases: ["recentchalk"], callback: (player, args) =>
         {
             if (!IsPlayerAdmin(player)) return;
 
