@@ -298,5 +298,6 @@ public class ChatCommands : CovePlugin
         UnregisterCommand("chalkrecent");
         UnregisterCommand("reload");
         UnregisterCommand("plugins");
+        UnregisterCommand("steam");
     }
 }
