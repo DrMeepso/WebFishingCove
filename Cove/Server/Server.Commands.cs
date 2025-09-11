@@ -1,4 +1,4 @@
-﻿using Cove.Server.Actor;
+using Cove.Server.Actor;
 using Steamworks;
 using System;
 using System.Collections.Generic;
@@ -48,6 +48,19 @@ namespace Cove.Server
             return selectedPlayer;
         }
 
+        /// <summary>
+        /// Registers the server's built-in chat/console commands (help, exit/shutdown, kick, ban, prev/recent).
+        /// </summary>
+        /// <remarks>
+        /// Adds command handlers to the server's Commands collection:
+        /// - help: lists available commands and their descriptions.
+        /// - exit (alias: shutdown): host-only shutdown command.
+        /// - kick: admin-only; accepts a username or SteamID and disconnects the target.
+        /// - ban: admin-only; accepts a username, previous-player identifier (prefixed with '#'), or SteamID and bans the target. Supports an optional quoted ban reason (text between the first and last double quotes) which is forwarded to the ban mechanism; if a SteamID is provided the ban is applied directly. If a matching previous player is found by FisherID, the command can accept "#FisherID" to ban that previous player.
+        /// - prev (alias: recent): admin-only; lists recently disconnected players (within ~10 minutes).
+        ///
+        /// These handlers perform permission checks (host/admin) and send feedback via the server messaging functions. They also call server actions such as Stop(), kickPlayer(...), and banPlayer(...).
+        /// </remarks>
         public void RegisterDefaultCommands()
         {
             RegisterCommand("help", (player, args) =>

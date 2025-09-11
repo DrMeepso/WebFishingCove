@@ -1,4 +1,4 @@
-﻿using Cove.Server;
+using Cove.Server;
 using Cove.Server.Actor;
 using Cove.Server.Plugins;
 using Steamworks;
@@ -281,6 +281,13 @@ public class ChatCommands : CovePlugin
         }
     }
 
+    /// <summary>
+    /// Performs plugin shutdown tasks and unregisters commands registered by this plugin.
+    /// </summary>
+    /// <remarks>
+    /// Calls the base class shutdown logic, then removes all chat commands that were added during initialization
+    /// so the plugin can be cleanly reloaded without leaving stale command handlers registered.
+    /// </remarks>
     public override void onEnd()
     {
         base.onEnd();
