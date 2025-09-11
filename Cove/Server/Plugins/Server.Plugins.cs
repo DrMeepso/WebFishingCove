@@ -95,5 +95,15 @@ namespace Cove.Server
                 }
             }
         }
+        
+        private void loadInternalPlugin(string name, string id, string author, CovePlugin plugin)
+        {
+            PluginInstance thisInstance = new(plugin, name, id, author);
+
+            loadedPlugins.Add(thisInstance);
+            Log($"Internal Plugin Init: {name}");
+            plugin.onInit(); // start the plugin!
+        }
+        
     }
 }
