@@ -78,6 +78,9 @@ namespace Cove.Server
                     }
                 }
             }
+            
+            loadInternalPlugin("EntityPlugin", "DrMeepso", "Handles entity management and syncing", new Cove.InternalPlugins.EntityPlugin(this));
+            
         }
 
         string readConfigFromPlugin(string fileIdentifyer, Assembly asm)
