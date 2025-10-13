@@ -208,7 +208,7 @@ namespace Cove.Server
                     // get the time since the player left in a human readable format
                     string timeLeft =
                         $"{Math.Round((DateTime.UtcNow - DateTimeOffset.FromUnixTimeSeconds(prevPlayer.leftTimestamp).UtcDateTime).TotalMinutes)} minutes ago";
-                    sb.Append($"{prevPlayer.Username} ({prevPlayer.FisherID}) - Left: {timeLeft}\n");
+                    sb.Append($"{prevPlayer.Username} [{prevPlayer.SteamId.ToString()}] ({prevPlayer.FisherID}) - Left: {timeLeft}\n");
                 }
                 messagePlayer(sb.ToString(), player.SteamId);
             });

@@ -28,6 +28,9 @@ namespace Cove.Server
 {
     public partial class CoveServer
     {
+        
+        private static readonly object BanLock = new();
+        
         public void banPlayer(CSteamID id, bool saveToFile = false, string banReason = "")
         {
             var player = new WFPlayer(id, Steamworks.SteamFriends.GetFriendPersonaName(id), new SteamNetworkingIdentity());
@@ -57,22 +60,25 @@ namespace Cove.Server
         {
             string fileDir = $"{AppDomain.CurrentDomain.BaseDirectory}bans.txt";
 
-            // check if the file exists
-            if (!File.Exists(fileDir))
+            lock (BanLock)
             {
-                File.Create(fileDir).Close();
-                return false; // no one is banned yet
-            }
-            
-            string[] fileContent = File.ReadAllLines(fileDir);
-            foreach (string line in fileContent)
-            {
-                if (line.Contains(id.m_SteamID.ToString()))
+                // check if the file exists
+                if (!File.Exists(fileDir))
                 {
-                    return true;
+                    File.Create(fileDir).Close();
+                    return false; // no one is banned yet
+                }
+
+                string[] fileContent = File.ReadAllLines(fileDir);
+
+                foreach (string line in fileContent)
+                {
+                    if (line.Contains(id.m_SteamID.ToString()))
+                    {
+                        return true;
+                    }
                 }
             }
-
             return false;
         }
 
@@ -83,7 +89,18 @@ namespace Cove.Server
             entry += username;
             if (!string.IsNullOrEmpty(reason))
                 entry += $" - {reason}";
-            File.AppendAllLines($"{AppDomain.CurrentDomain.BaseDirectory}bans.txt", [entry]);
+            // check if the file is already opened by another process
+            lock (BanLock)
+            {
+                try
+                {
+                    File.AppendAllLines($"{AppDomain.CurrentDomain.BaseDirectory}bans.txt", [entry]);
+                }
+                catch (IOException e)
+                {
+                    logger.Warning($"Error banning player: {e.ToString()}");
+                }
+            }
         }
 
         public void kickPlayer(CSteamID id)
