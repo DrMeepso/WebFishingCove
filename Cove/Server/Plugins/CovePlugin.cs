@@ -40,7 +40,7 @@ namespace Cove.Server.Plugins
 
         public void SendPlayerChatMessage(WFPlayer receiver, string message)
         {
-            // remove a # incase its given
+            // remove a # in case its given
             ParentServer.messagePlayer(message, receiver.SteamId);
         }
 
