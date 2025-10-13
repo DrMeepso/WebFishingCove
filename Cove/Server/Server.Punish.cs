@@ -29,7 +29,7 @@ namespace Cove.Server
     public partial class CoveServer
     {
         
-        private static readonly object banLock = new();
+        private static readonly object BanLock = new();
         
         public void banPlayer(CSteamID id, bool saveToFile = false, string banReason = "")
         {
@@ -60,7 +60,7 @@ namespace Cove.Server
         {
             string fileDir = $"{AppDomain.CurrentDomain.BaseDirectory}bans.txt";
 
-            lock (banLock)
+            lock (BanLock)
             {
                 // check if the file exists
                 if (!File.Exists(fileDir))
@@ -90,7 +90,7 @@ namespace Cove.Server
             if (!string.IsNullOrEmpty(reason))
                 entry += $" - {reason}";
             // check if the file is already opened by another process
-            lock (banLock)
+            lock (BanLock)
             {
                 try
                 {
