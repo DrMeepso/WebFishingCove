@@ -1,9 +1,4 @@
-﻿// @title TimeTracker
-// @ident timetracker
-// @description A plugin to track and display player playtime on the server.
-// Tags used for exporting standalone plugin, do not remove
-
-using Cove.Server;
+﻿using Cove.Server;
 using Cove.Server.Actor;
 using Cove.Server.Plugins;
 using LiteDB;
@@ -143,7 +138,7 @@ public class TimeTracker : CovePlugin
         
         // if the player is currently online, add the current session time
         long currentSessionTime = _playerJoinTime.ContainsKey(steamId) ? (DateTimeOffset.UtcNow.ToUnixTimeSeconds() - _playerJoinTime[steamId].ToUnixTimeSeconds()) : 0;
-        return record?.TotalPlayTime + currentSessionTime ?? 0;
+        return (record?.TotalPlayTime ?? 0) + currentSessionTime;
     }
     
 }
