@@ -24,18 +24,12 @@ public class TimeTracker : CovePlugin
     CoveServer Server { get; set; } // lol
     private LiteDatabase _steamIdPlayTime;
     private Dictionary<ulong, DateTimeOffset> _playerJoinTime;
+
+    private System.Threading.Timer _autosaveTimer;
     
     public override void onInit()
     {
         base.onInit();
-        
-        // print out all existing records for debugging
-        var col = _steamIdPlayTime.GetCollection<PlayerPlayTime>("playtime");
-        var records = col.FindAll();
-        foreach (var record in records)
-        {
-            Log($"Existing record: SteamID {record.SteamID}, TotalPlayTime {record.TotalPlayTime} seconds, LastSessionStart {record.LastSessionStart}");
-        }
         
         RegisterCommand(command:"playtime", aliases:[], callback: (player, args) =>
         {
@@ -52,6 +46,20 @@ public class TimeTracker : CovePlugin
         SetCommandDescription("playtime", "Check your total playtime on this server.");
         
         Log("TimeTracker plugin initialized ⌚");
+        
+        // Set up autosave every 5 minutes
+        _autosaveTimer = new System.Threading.Timer(_ =>
+        {
+            try { 
+                SaveAllPlayers(true); 
+                Log("Autosaved all online players' playtime."); 
+            } 
+            catch (Exception ex) 
+            { 
+                Log($"Error during autosave: {ex.Message}"); 
+            }
+        }, null, TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(5));
+        
     }
 
     public override void onEnd()
@@ -59,20 +67,7 @@ public class TimeTracker : CovePlugin
         base.onEnd();
         UnregisterCommand("playtime");
         
-        
-        // save all currently online players' playtime
-        var col = _steamIdPlayTime.GetCollection<PlayerPlayTime>("playtime");
-        foreach (var player in Server.getAllPlayers())
-        {
-            var playTime = new PlayerPlayTime
-            {
-                SteamID = (long)player.m_SteamID,
-                TotalPlayTime = GetPlayerTotalPlayTime(player.m_SteamID),
-                LastSessionStart = _playerJoinTime[player.m_SteamID].ToUnixTimeSeconds()
-            };
-            playTime.LastSessionStart = _playerJoinTime[player.m_SteamID].ToUnixTimeSeconds();
-            col.Upsert(playTime); // insert or update the record
-        }
+        SaveAllPlayers(); // save without resetting join time
         
         Log("TimeTracker plugin shutting down, saved all online players' playtime.");
         
@@ -81,8 +76,29 @@ public class TimeTracker : CovePlugin
         _playerJoinTime.Clear();
         _playerJoinTime = null;
         
+        _autosaveTimer?.Dispose();
+        _autosaveTimer = null;
     }
 
+    public void SaveAllPlayers(bool resetJoinTime = false)
+    {
+        // save all currently online players' playtime
+        var col = _steamIdPlayTime.GetCollection<PlayerPlayTime>("playtime");
+        foreach (var player in Server.AllPlayers)
+        {
+            var playTime = new PlayerPlayTime
+            {
+                SteamID = (long)player.SteamId.m_SteamID,
+                TotalPlayTime = GetPlayerTotalPlayTime(player.SteamId.m_SteamID),
+                LastSessionStart = _playerJoinTime[player.SteamId.m_SteamID].ToUnixTimeSeconds()
+            };
+            playTime.LastSessionStart = _playerJoinTime[player.SteamId.m_SteamID].ToUnixTimeSeconds();
+            if (resetJoinTime)
+                _playerJoinTime[player.SteamId.m_SteamID] = DateTimeOffset.UtcNow; // reset join time to now
+            col.Upsert(playTime); // insert or update the record
+        }
+    }
+    
     public override void onPlayerJoin(WFPlayer player)
     {
         base.onPlayerJoin(player);
