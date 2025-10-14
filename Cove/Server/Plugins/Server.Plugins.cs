@@ -79,8 +79,8 @@ namespace Cove.Server
                 }
             }
             
-            loadInternalPlugin("EntityPlugin", "DrMeepso", "Handles entity management and syncing", new Cove.InternalPlugins.EntityPlugin(this));
-            loadInternalPlugin("TimeTracker", "DrMeepso", "Tracks playtime of users", new Cove.InternalPlugins.TimeTracker.TimeTracker(this));
+            loadInternalPlugin("EntityPlugin", "entityplugin", "DrMeepso", new Cove.InternalPlugins.EntityPlugin(this));
+            loadInternalPlugin("TimeTracker", "timetracker", "DrMeepso", new Cove.InternalPlugins.TimeTracker.TimeTracker(this));
             
         }
 

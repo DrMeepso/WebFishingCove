@@ -1,4 +1,9 @@
-﻿using Cove.Server;
+﻿// @title TimeTracker
+// @ident timetracker
+// @description A plugin to track and display player playtime on the server.
+// Tags used for exporting standalone plugin, do not remove
+
+using Cove.Server;
 using Cove.Server.Actor;
 using Cove.Server.Plugins;
 using LiteDB;
@@ -25,7 +30,7 @@ public class TimeTracker : CovePlugin
     private LiteDatabase _steamIdPlayTime;
     private Dictionary<ulong, DateTimeOffset> _playerJoinTime;
 
-    private System.Threading.Timer _autosaveTimer;
+    private Timer _autosaveTimer;
     
     public override void onInit()
     {
