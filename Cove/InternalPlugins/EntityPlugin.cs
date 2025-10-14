@@ -20,14 +20,13 @@ public class EntityPlugin : CovePlugin
     public override void onNetworkPacket(WFPlayer sender, Dictionary<string, object> packet)
     {
         base.onNetworkPacket(sender, packet);
-        
-        
-        var wantedTypes = new List<string>()
-            {}
+
+
+        var wantedTypes = new List<string>();
             
         var packetType = (string)packet["type"];
         if (packetType != "instance_actor") return;
-        CoveServer.printStringDict(packet);
+        //CoveServer.printStringDict(packet);
     }
 
     public override void onEnd()
