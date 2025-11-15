@@ -51,7 +51,7 @@ namespace Cove.Server
         }
 
         // send a packet to a specific player using tcp
-        public void sendPacketToPlayer(Dictionary<string, object> packet, CSteamID id, int from = 0)
+        public void sendPacketToPlayer(Dictionary<string, object> packet, CSteamID id, long from = 0)
         {
             // dont send the packet to the server!
             if (id.m_SteamID == (ulong)0)

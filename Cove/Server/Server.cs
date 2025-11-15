@@ -400,16 +400,7 @@ namespace Cove.Server
                                                     break;
                                                 }
 
-                                                object identityObj = pkt.ContainsKey("identity") ? pkt["identity"] : 0;
-                                                int identity = 0;
-                                                try
-                                                {
-                                                    identity = Convert.ToInt32(identityObj);
-                                                }
-                                                catch (Exception)
-                                                {
-                                                    identity = 0;
-                                                }
+                                                long identity = pkt.ContainsKey("identity") ? Convert.ToInt64(pkt["identity"]) : 0;
 
                                                 object targetObj = pkt.ContainsKey("target") ? pkt["target"] : "all";
                                                 string targetStr = targetObj?.ToString() ?? "all";
