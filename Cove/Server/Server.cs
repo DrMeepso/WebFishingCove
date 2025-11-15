@@ -350,7 +350,7 @@ namespace Cove.Server
                                 // log payload as hex (first up to 64 bytes)
                                 int logLen = Math.Min(payload.Length, 64);
                                 string hex = BitConverter.ToString(payload, 0, logLen);
-                                //Log($"[TCP] Connection {ps.ConnectionID}: type='{packetType}', payloadLength={payload.Length}, payloadHex(first {logLen})={hex}");
+                                Log($"[TCP] Connection {ps.ConnectionID}: type='{packetType}', payloadLength={payload.Length}, payloadHex(first {logLen})={hex}");
 
                                 switch (packetType)
                                 {
@@ -358,7 +358,8 @@ namespace Cove.Server
                                         Log($"[TCP] Connection {ps.ConnectionID}: handling 'W' packet, IsAuthenticated={ps.IsAuthenticated}, SteamID={ps.SteamID.m_SteamID}");
                                         if (ps.IsAuthenticated)
                                         {
-                                            OnNetworkPacket(payload, ps.SteamID);
+                                            Log("[TCP] Connection {ps.ConnectionID}: passing 'W' packet to OnNetworkPacket");
+                                            //OnNetworkPacket(payload, ps.SteamID);
                                         }
                                         else
                                         {

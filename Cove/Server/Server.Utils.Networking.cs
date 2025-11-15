@@ -42,7 +42,7 @@ namespace Cove.Server
         {
             foreach (CSteamID player in getAllPlayers())
             {
-                if (player == SteamUser.GetSteamID())
+                if (player.m_SteamID == (ulong)0)
                     continue;
                 
                 sendPacketToPlayer(packet, player);
@@ -50,25 +50,20 @@ namespace Cove.Server
         }
 
         // send a packet to a specific player using tcp
-        public void sendPacketToPlayer(Dictionary<string, object> packet, CSteamID id)
+        public void sendPacketToPlayer(Dictionary<string, object> packet, CSteamID id, CSteamID from = default)
         {
-            byte[] packetBytes = writePacket(packet);
             
             // get the wfPlayer object
             var player = _playerSockets.Find(p => p.SteamID == id);
             
-            var messageBuffer = new byte[5 + packetBytes.Length];
-            // write the length of the packet as a 4 byte int
-            BitConverter.GetBytes(packetBytes.Length).CopyTo(messageBuffer, 0);
-            // write "w" after the length
-            messageBuffer[4] = (byte)'W';
-            // write the packet bytes
-            packetBytes.CopyTo(messageBuffer, 5);
-            
-            if (player != null)
+            Dictionary<string, object> packetHeader = new Dictionary<string, object>
             {
-                player.Stream.Write(messageBuffer, 0, messageBuffer.Length);
-            }
+                { "packet_data", packet }
+            };
+            
+            byte[] packetBytes = writePacket(packet);
+            
+            SendWebfishingPacket(player.ConnectionID, packetBytes);
         }
 
         public CSteamID[] getAllPlayers()
