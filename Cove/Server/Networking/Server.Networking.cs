@@ -128,6 +128,17 @@ partial class CoveServer
 
                 break;
             }
+            case "disconnect":
+            {
+                // find the socket via the ConnectionID
+                var socket = _playerSockets.Find(s => s.ConnectionID == ConnectionID);
+                if (socket != null)
+                {
+                    socket.Socket.Close();
+                    _playerSockets.Remove(socket);
+                }
+                break;
+            }
 
             default:
             {

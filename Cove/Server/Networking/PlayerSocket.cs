@@ -20,6 +20,26 @@ public class PlayerSocket
         Stream = socket.GetStream();
         
         ConnectionID = Guid.NewGuid().ToString();
-        
+    }
+
+    // Returns true if the socket appears to still be connected.
+    // This avoids relying on TcpClient.Connected, which is not reliable.
+    public bool IsConnected()
+    {
+        try
+        {
+            if (Socket == null || !Socket.Connected)
+                return false;
+
+            if (!Socket.Client.Poll(0, SelectMode.SelectRead))
+                return true; // no data yet and not marked readable -> assume connected
+
+            // If Poll says data is available, check if a zero-length read would occur
+            return Socket.Client.Available != 0;
+        }
+        catch
+        {
+            return false;
+        }
     }
 }

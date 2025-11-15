@@ -297,8 +297,8 @@ namespace Cove.Server
             {
                 TcpClient client = TCPServer.AcceptTcpClient();
                 PlayerSocket ps = new PlayerSocket(client);
-                _playerSockets.Add(ps);
-                Log("Accepted new TCP connection!");
+                lock (_playerSockets)
+                    _playerSockets.Add(ps);
             }
         }
 
@@ -320,147 +320,189 @@ namespace Cove.Server
                 try
                 {
                     // loop though all player sockets and check for packets
-                    for (int i = 0; i < _playerSockets.Count; i++)
+                    // iterate backwards so we can safely remove sockets while iterating
+                    // take a snapshot of the socket list to avoid locking while doing IO
+                    PlayerSocket[] socketSnapshot;
+                    lock (_playerSockets)
                     {
-                        PlayerSocket ps = _playerSockets[i];
-                        if (!ps.Socket.Connected)
+                        socketSnapshot = _playerSockets.ToArray();
+                    }
+
+                    foreach (PlayerSocket ps in socketSnapshot)
+                    {
+                        // if the socket is no longer connected, handle disconnect and continue
+                        if (!ps.IsConnected())
+                        {
+                            HandlePlayerDisconnect(ps, "socket disconnected");
                             continue;
+                        }
 
                         NetworkStream stream = ps.Stream;
-                        // extra debug: log that we're checking this connection
 
-                        while (stream.DataAvailable)
+                        // if the stream has already been disposed/closed, skip it
+                        if (stream == null || !stream.CanRead)
                         {
-                            didWork = true;
+                            HandlePlayerDisconnect(ps, "stream closed");
+                            continue;
+                        }
+
+                        try
+                        {
+                            // Accessing DataAvailable on a disposed stream can throw, so guard it
+                            bool hasData;
                             try
                             {
-                                // log how many bytes are available
-                                //Log($"[TCP] Connection {ps.ConnectionID}: {stream.DataAvailable} bytes available to read.");
+                                hasData = stream.DataAvailable;
+                            }
+                            catch (ObjectDisposedException)
+                            {
+                                HandlePlayerDisconnect(ps, "stream disposed");
+                                continue;
+                            }
 
-                                // each packet is prefixed with a 4 byte int for the length and a 'W' or 'M' byte
-                                byte[] packet = NetworkUtils.ReadPacket(stream);
-
-                                //Log($"[TCP] Connection {ps.ConnectionID}: received packet, raw length={packet.Length}");
-
-                                if (packet.Length == 0)
+                            while (hasData)
+                            {
+                                didWork = true;
+                                try
                                 {
-                                    Log($"[TCP] Connection {ps.ConnectionID}: empty packet");
-                                    continue;
-                                }
+                                    // each packet is prefixed with a 4 byte int for the length and a 'W' or 'M' byte
+                                    byte[] packet = NetworkUtils.ReadPacket(stream);
 
-                                char packetType = (char)packet[0];
-                                byte[] payload = packet.Skip(1).ToArray();
+                                    if (packet.Length == 0)
+                                    {
+                                        Log($"[TCP] Connection {ps.ConnectionID}: empty packet");
+                                        break;
+                                    }
 
-                                // log payload as hex (first up to 64 bytes)
-                                int logLen = Math.Min(payload.Length, 64);
-                                string hex = BitConverter.ToString(payload, 0, logLen);
-                                //Log($"[TCP] Connection {ps.ConnectionID}: type='{packetType}', payloadLength={payload.Length}, payloadHex(first {logLen})={hex}");
+                                    char packetType = (char)packet[0];
+                                    byte[] payload = packet.Skip(1).ToArray();
 
-                                switch (packetType)
-                                {
-                                    case 'W':
-                                        //Log($"[TCP] Connection {ps.ConnectionID}: handling 'W' packet, IsAuthenticated={ps.IsAuthenticated}, SteamID={ps.SteamID.m_SteamID}");
-                                        if (ps.IsAuthenticated)
-                                        {
-                                            //Log("[TCP] Connection {ps.ConnectionID}: passing 'W' packet to OnNetworkPacket");
-
-                                            var pkt = readPacket(payload);
-
-                                            if (pkt == null)
+                                    switch (packetType)
+                                    {
+                                        case 'W':
+                                            if (ps.IsAuthenticated)
                                             {
-                                                Log($"[TCP] Connection {ps.ConnectionID}: readPacket returned null");
-                                                break;
-                                            }
+                                                var pkt = readPacket(payload);
 
-                                            // Safely extract payload and identity
-                                            Dictionary<string, object>? payloadDict = null;
-                                            if (pkt.ContainsKey("payload"))
-                                                payloadDict = pkt["payload"] as Dictionary<string, object>;
-
-                                            if (payloadDict == null)
-                                            {
-                                                Log($"[TCP] Connection {ps.ConnectionID}: packet payload missing or invalid");
-                                                break;
-                                            }
-
-                                            object identityObj = pkt.ContainsKey("identity") ? pkt["identity"] : 0;
-                                            int identity = 0;
-                                            try
-                                            {
-                                                identity = Convert.ToInt32(identityObj);
-                                            }
-                                            catch (Exception)
-                                            {
-                                                // fallback to 0 if conversion fails
-                                                identity = 0;
-                                            }
-
-                                            object targetObj = pkt.ContainsKey("target") ? pkt["target"] : "all";
-                                            string targetStr = targetObj?.ToString() ?? "all";
-
-                                            switch (targetStr)
-                                            {
-                                                case "steamlobby":
-                                                case "all":
-                                                    // resend the packet to all players
-                                                    foreach (var player in _playerSockets)
-                                                    {
-                                                        sendPacketToPlayer(payloadDict, player.SteamID, identity);
-                                                    }
-                                                    OnNetworkPacket(payloadDict, ps.SteamID);
+                                                if (pkt == null)
+                                                {
+                                                    Log($"[TCP] Connection {ps.ConnectionID}: readPacket returned null");
                                                     break;
-                                                case "peers": // resend the packet to all players except the sender
-                                                    foreach (var player in _playerSockets)
-                                                    {
-                                                        if (player.SteamID != ps.SteamID)
+                                                }
+
+                                                Dictionary<string, object>? payloadDict = null;
+                                                if (pkt.ContainsKey("payload"))
+                                                    payloadDict = pkt["payload"] as Dictionary<string, object>;
+
+                                                if (payloadDict == null)
+                                                {
+                                                    Log($"[TCP] Connection {ps.ConnectionID}: packet payload missing or invalid");
+                                                    break;
+                                                }
+
+                                                object identityObj = pkt.ContainsKey("identity") ? pkt["identity"] : 0;
+                                                int identity = 0;
+                                                try
+                                                {
+                                                    identity = Convert.ToInt32(identityObj);
+                                                }
+                                                catch (Exception)
+                                                {
+                                                    identity = 0;
+                                                }
+
+                                                object targetObj = pkt.ContainsKey("target") ? pkt["target"] : "all";
+                                                string targetStr = targetObj?.ToString() ?? "all";
+
+                                                switch (targetStr)
+                                                {
+                                                    case "steamlobby":
+                                                    case "all":
+                                                        foreach (var player in _playerSockets)
                                                         {
                                                             sendPacketToPlayer(payloadDict, player.SteamID, identity);
                                                         }
-                                                    }
-                                                    OnNetworkPacket(payloadDict, ps.SteamID);
-                                                    break;
-                                                default:
-                                                    // if the target is a specific steamid, send it to that player only
-                                                    // try parse the target to a int
-                                                    if (UInt64.TryParse(targetStr, out ulong targetSteamID))
-                                                    {
-                                                        sendPacketToPlayer(payloadDict, new CSteamID(targetSteamID), identity);
-                                                    }
-                                                    else
-                                                    {
-                                                        Log($"[TCP] Connection {ps.ConnectionID}: unknown target '{targetStr}' in 'W' packet");
-                                                    }
+                                                        OnNetworkPacket(payloadDict, ps.SteamID);
+                                                        break;
+                                                    case "peers":
+                                                        foreach (var player in _playerSockets)
+                                                        {
+                                                            if (player.SteamID != ps.SteamID)
+                                                            {
+                                                                sendPacketToPlayer(payloadDict, player.SteamID, identity);
+                                                            }
+                                                        }
+                                                        OnNetworkPacket(payloadDict, ps.SteamID);
+                                                        break;
+                                                    default:
+                                                        if (UInt64.TryParse(targetStr, out ulong targetSteamID))
+                                                        {
+                                                            sendPacketToPlayer(payloadDict, new CSteamID(targetSteamID), identity);
+                                                        }
+                                                        else
+                                                        {
+                                                            Log($"[TCP] Connection {ps.ConnectionID}: unknown target '{targetStr}' in 'W' packet");
+                                                        }
 
-                                                    break;
+                                                        break;
+                                                }
                                             }
-                                            
+                                            else
+                                            {
+                                                Log(
+                                                    $"[TCP] Connection {ps.ConnectionID}: received 'W' packet from unauthenticated connection, ignoring.");
+                                            }
 
-                                            //OnNetworkPacket(payload, ps.SteamID);
-                                        }
-                                        else
-                                        {
-                                            Log(
-                                                $"[TCP] Connection {ps.ConnectionID}: received 'W' packet from unauthenticated connection, ignoring.");
-                                        }
+                                            break;
 
-                                        break;
+                                        case 'M':
+                                            HandleMetaPacket(ps.ConnectionID, payload);
+                                            break;
 
-                                    case 'M':
-                                        HandleMetaPacket(ps.ConnectionID, payload);
-                                        break;
+                                        default:
+                                            Log($"[TCP] Connection {ps.ConnectionID}: unknown packet type '{packetType}'");
+                                            break;
+                                    }
+                                }
+                                catch (System.IO.IOException ioex)
+                                {
+                                    Log($"[TCP] Connection {ps.ConnectionID}: stream IO error, treating as disconnect: {ioex.Message}");
+                                    HandlePlayerDisconnect(ps, ioex.Message);
+                                    break;
+                                }
+                                catch (SocketException sex)
+                                {
+                                    Log($"[TCP] Connection {ps.ConnectionID}: socket error, treating as disconnect: {sex.Message}");
+                                    HandlePlayerDisconnect(ps, sex.Message);
+                                    break;
+                                }
+                                catch (ObjectDisposedException)
+                                {
+                                    HandlePlayerDisconnect(ps, "stream disposed during read");
+                                    break;
+                                }
+                                catch (Exception ex)
+                                {
+                                    Log($"[TCP] Error while reading/handling packet from connection {ps.ConnectionID}: {ex}");
+                                    break;
+                                }
 
-                                    default:
-                                        Log($"[TCP] Connection {ps.ConnectionID}: unknown packet type '{packetType}'");
-                                        break;
+                                // re-check DataAvailable safely at the end of the loop
+                                try
+                                {
+                                    hasData = stream.DataAvailable;
+                                }
+                                catch (ObjectDisposedException)
+                                {
+                                    HandlePlayerDisconnect(ps, "stream disposed after read");
+                                    break;
                                 }
                             }
-                            catch (Exception ex)
-                            {
-                                Log(
-                                    $"[TCP] Error while reading/handling packet from connection {ps.ConnectionID}: {ex}");
-                                // break the inner loop so we don't spin on a broken stream
-                                break;
-                            }
+                        }
+                        catch (ObjectDisposedException)
+                        {
+                            HandlePlayerDisconnect(ps, "stream disposed (outer)");
+                            continue;
                         }
                     }
                 }
@@ -476,6 +518,65 @@ namespace Cove.Server
 
                 if (!didWork)
                     Thread.Sleep(10);
+            }
+        }
+
+        // Called when a TCP PlayerSocket disconnects or its stream fails.
+        void HandlePlayerDisconnect(PlayerSocket ps, string reason = "disconnected")
+        {
+            try
+            {
+                // remove socket from list
+                lock (_playerSockets)
+                {
+                    _playerSockets.Remove(ps);
+                }
+
+                // close resources
+                try { ps.Stream?.Close(); } catch { }
+                try { ps.Socket?.Close(); } catch { }
+
+                // notify server logic if we have an associated player
+                if (ps.SteamID.m_SteamID != 0)
+                {
+                    WFPlayer p = AllPlayers.Find(x => x.SteamId == ps.SteamID);
+                    if (p != null)
+                    {
+                        Log($"[{p.FisherID}] {p.Username} disconnected ({reason})");
+
+                        // notify plugins
+                        foreach (var plugin in loadedPlugins)
+                        {
+                            plugin.plugin.onPlayerLeave(p);
+                        }
+
+                        // inform other players
+                        Dictionary<string, object> leftPacket = new();
+                        leftPacket["type"] = "peer_left"; // client-side can use this to remove player
+                        leftPacket["user_id"] = (long)p.SteamId.m_SteamID;
+                        sendPacketToPlayers(leftPacket);
+
+                        // remove player from server lists
+                        AllPlayers.Remove(p);
+
+                        // remove player from actor lists if present
+                        allActors.RemoveAll(a => a is WFPlayer wp && wp.SteamId == p.SteamId);
+
+                        updatePlayercount();
+                    }
+                    else
+                    {
+                        Log($"[TCP] Disconnected socket for SteamID {ps.SteamID.m_SteamID} but no WFPlayer found.");
+                    }
+                }
+                else
+                {
+                    Log($"[TCP] Disconnected unauthenticated socket {ps.ConnectionID}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Log($"Error handling disconnected player/socket: {ex}");
             }
         }
 
@@ -545,4 +646,3 @@ namespace Cove.Server
         }
     }
 }
-

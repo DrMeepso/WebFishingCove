@@ -53,6 +53,11 @@ namespace Cove.Server
         // send a packet to a specific player using tcp
         public void sendPacketToPlayer(Dictionary<string, object> packet, CSteamID id, int from = 0)
         {
+            // dont send the packet to the server!
+            if (id.m_SteamID == (ulong)0)
+            {
+                return;
+            }
             
             // get the wfPlayer object
             var player = _playerSockets.Find(p => p.SteamID == id);

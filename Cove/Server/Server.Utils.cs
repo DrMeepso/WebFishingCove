@@ -66,7 +66,7 @@ namespace Cove.Server
             instanceSpacePrams["zone"] = "main_zone";
             instanceSpacePrams["zone_owner"] = -1;
             instanceSpacePrams["actor_id"] = IId;
-            instanceSpacePrams["creator_id"] = (long)SteamUser.GetSteamID().m_SteamID;
+            instanceSpacePrams["creator_id"] = (long)0;
 
             sendPacketToPlayers(rainSpawnPacket); // spawn the rain!
             RainCloud cloud = new RainCloud(IId, pos);
@@ -145,7 +145,7 @@ namespace Cove.Server
             instanceSpacePrams["zone"] = "main_zone";
             instanceSpacePrams["zone_owner"] = -1;
             instanceSpacePrams["actor_id"] = IId;
-            instanceSpacePrams["creator_id"] = (long)SteamUser.GetSteamID().m_SteamID;
+            instanceSpacePrams["creator_id"] = (long)0;
 
             sendPacketToPlayers(spawnPacket);
 
@@ -186,7 +186,7 @@ namespace Cove.Server
                     instanceSpacePrams["zone"] = "main_zone";
                     instanceSpacePrams["zone_owner"] = -1;
                     instanceSpacePrams["actor_id"] = actor.InstanceID;
-                    instanceSpacePrams["creator_id"] = (long)SteamUser.GetSteamID().m_SteamID;
+                    instanceSpacePrams["creator_id"] = (long)0;
 
                     sendPacketToPlayer(spawnPacket, id);
                 }
@@ -260,7 +260,7 @@ namespace Cove.Server
             // get all players in the lobby
             foreach (CSteamID member in getAllPlayers())
             {
-                if (member.m_SteamID == SteamUser.GetSteamID().m_SteamID) continue;
+                if (member.m_SteamID == 0) continue;
                 sendPacketToPlayer(chatPacket, member);
             }
         }
