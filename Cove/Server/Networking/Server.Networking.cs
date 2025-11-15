@@ -69,13 +69,13 @@ partial class CoveServer
     // Meta packets are json objects that have a "m" infrount of them
     public void SendMetaPacket(string ConnectionID, byte[] data)
     {
-        byte[] metaPrefix = System.Text.Encoding.UTF8.GetBytes("m");
+        byte[] metaPrefix = System.Text.Encoding.UTF8.GetBytes("M");
         byte[] packetData = new byte[metaPrefix.Length + data.Length];
         Buffer.BlockCopy(metaPrefix, 0, packetData, 0, metaPrefix.Length);
         Buffer.BlockCopy(data, 0, packetData, metaPrefix.Length, data.Length);
         
         // get the length of the packet data
-        int packetLength = packetData.Length;
+        UInt32 packetLength = (UInt32)packetData.Length;
         
         // find the socket via the ConnectionID
         var socket = _playerSockets.Find(s => s.ConnectionID == ConnectionID);
@@ -83,9 +83,11 @@ partial class CoveServer
         {
             // send the packet length first
             byte[] lengthBytes = BitConverter.GetBytes(packetLength);
-            socket.Stream.Write(lengthBytes, 0, lengthBytes.Length);
-            // send the packet data
-            socket.Stream.Write(packetData, 0, packetData.Length);
+            // join the length bytes and the packet data
+            byte[] finalPacket = new byte[lengthBytes.Length + packetData.Length];
+            Buffer.BlockCopy(lengthBytes, 0, finalPacket, 0, lengthBytes.Length);
+            Buffer.BlockCopy(packetData, 0, finalPacket, lengthBytes.Length, packetData.Length);
+            socket.Stream.Write(finalPacket, 0, finalPacket.Length);
         } else
         {
             Log($"Failed to send meta packet to {ConnectionID}: Socket not found");
