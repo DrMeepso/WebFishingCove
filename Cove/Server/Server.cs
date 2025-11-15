@@ -291,6 +291,8 @@ namespace Cove.Server
             while (true)
             {
                 TcpClient client = TCPServer.AcceptTcpClient();
+                PlayerSocket ps = new PlayerSocket(client);
+                _playerSockets.Add(ps);
                 Log("Accepted new TCP connection!");
             }
         }
@@ -305,7 +307,7 @@ namespace Cove.Server
                 return false;
         }
 
-        void RunNetwork()
+        async void RunNetwork()
         {
             while (true)
             {
@@ -319,8 +321,22 @@ namespace Cove.Server
                         if (ps.Stream.DataAvailable)
                         {
                             didWork = true;
-                            var packet = NetworkUtils.ReadPacket(ps.Stream);
-                            OnNetworkPacket(packet, ps.SteamID);
+                            var packetBuffer = new byte[4096];
+                            int bytesRead = await ps.Stream.ReadAsync(packetBuffer, 0, packetBuffer.Length);
+                            
+                            Log($"Received packet of size {bytesRead} from {ps.ConnectionID}");
+                            
+                            // check the first byte, if its "m" then handel it in a diffrent way, if its "w" then its a web fishing packet
+                            if (packetBuffer[0] == (byte)'m')
+                            {
+                                // its a meta packet
+                                HandleMetaPacket(ps.ConnectionID, packetBuffer.Skip(1).Take(bytesRead - 1).ToArray());
+                            }
+                            else
+                            {
+                                OnNetworkPacket(packetBuffer, ps.SteamID);
+                            }
+                            
                         }
                     }
                 }
