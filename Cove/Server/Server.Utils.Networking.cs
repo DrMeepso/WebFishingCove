@@ -49,25 +49,26 @@ namespace Cove.Server
             }
         }
 
+        // send a packet to a specific player using tcp
         public void sendPacketToPlayer(Dictionary<string, object> packet, CSteamID id)
         {
             byte[] packetBytes = writePacket(packet);
             
             // get the wfPlayer object
-            var player = AllPlayers.Find(p => p.SteamId.m_SteamID == id.m_SteamID);
-            if (player == null) return;
-
-            if (player.identity.GetSteamID64() == 0)
+            var player = _playerSockets.Find(p => p.SteamID == id);
+            
+            var messageBuffer = new byte[5 + packetBytes.Length];
+            // write the length of the packet as a 4 byte int
+            BitConverter.GetBytes(packetBytes.Length).CopyTo(messageBuffer, 0);
+            // write "w" after the length
+            messageBuffer[4] = (byte)'W';
+            // write the packet bytes
+            packetBytes.CopyTo(messageBuffer, 5);
+            
+            if (player != null)
             {
-                return;
+                player.Stream.Write(messageBuffer, 0, messageBuffer.Length);
             }
-
-            GCHandle handle = GCHandle.Alloc(packetBytes, GCHandleType.Pinned);
-            IntPtr dataPointer = handle.AddrOfPinnedObject();
-
-            SteamNetworkingMessages.SendMessageToUser(ref player.identity, dataPointer, (uint)packetBytes.Length, 8, 2);
-
-            handle.Free(); // free the handle
         }
 
         public CSteamID[] getAllPlayers()

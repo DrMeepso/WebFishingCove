@@ -318,25 +318,69 @@ namespace Cove.Server
                     for (int i = 0; i < _playerSockets.Count; i++)
                     {
                         PlayerSocket ps = _playerSockets[i];
-                        if (ps.Stream.DataAvailable)
+                        if (!ps.Socket.Connected)
+                            continue;
+
+                        NetworkStream stream = ps.Stream;
+                        // extra debug: log that we're checking this connection
+                        
+                        while (stream.DataAvailable)
                         {
                             didWork = true;
-                            var packetBuffer = new byte[4096];
-                            int bytesRead = await ps.Stream.ReadAsync(packetBuffer, 0, packetBuffer.Length);
-                            
-                            Log($"Received packet of size {bytesRead} from {ps.ConnectionID}");
-                            
-                            // check the first byte, if its "m" then handel it in a diffrent way, if its "w" then its a web fishing packet
-                            if (packetBuffer[0] == (byte)'m')
+                            try
                             {
-                                // its a meta packet
-                                HandleMetaPacket(ps.ConnectionID, packetBuffer.Skip(1).Take(bytesRead - 1).ToArray());
+                                
+                                // log how many bytes are available
+                                //Log($"[TCP] Connection {ps.ConnectionID}: {stream.DataAvailable} bytes available to read.");
+                                
+                                // each packet is prefixed with a 4 byte int for the length and a 'W' or 'M' byte
+                                byte[] packet = NetworkUtils.ReadPacket(stream);
+
+                                //Log($"[TCP] Connection {ps.ConnectionID}: received packet, raw length={packet.Length}");
+
+                                if (packet.Length == 0)
+                                {
+                                    Log($"[TCP] Connection {ps.ConnectionID}: empty packet");
+                                    continue;
+                                }
+
+                                char packetType = (char)packet[0];
+                                byte[] payload = packet.Skip(1).ToArray();
+
+                                // log payload as hex (first up to 64 bytes)
+                                int logLen = Math.Min(payload.Length, 64);
+                                string hex = BitConverter.ToString(payload, 0, logLen);
+                                //Log($"[TCP] Connection {ps.ConnectionID}: type='{packetType}', payloadLength={payload.Length}, payloadHex(first {logLen})={hex}");
+
+                                switch (packetType)
+                                {
+                                    case 'W':
+                                        Log($"[TCP] Connection {ps.ConnectionID}: handling 'W' packet, IsAuthenticated={ps.IsAuthenticated}, SteamID={ps.SteamID.m_SteamID}");
+                                        if (ps.IsAuthenticated)
+                                        {
+                                            OnNetworkPacket(payload, ps.SteamID);
+                                        }
+                                        else
+                                        {
+                                            Log($"[TCP] Connection {ps.ConnectionID}: received 'W' packet from unauthenticated connection, ignoring.");
+                                        }
+                                        break;
+
+                                    case 'M':
+                                        HandleMetaPacket(ps.ConnectionID, payload);
+                                        break;
+
+                                    default:
+                                        Log($"[TCP] Connection {ps.ConnectionID}: unknown packet type '{packetType}'");
+                                        break;
+                                }
                             }
-                            else
+                            catch (Exception ex)
                             {
-                                OnNetworkPacket(packetBuffer, ps.SteamID);
+                                Log($"[TCP] Error while reading/handling packet from connection {ps.ConnectionID}: {ex}");
+                                // break the inner loop so we don't spin on a broken stream
+                                break;
                             }
-                            
                         }
                     }
                 }
