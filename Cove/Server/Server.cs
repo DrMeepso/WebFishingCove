@@ -24,10 +24,13 @@ using Microsoft.Extensions.Logging;
 using Vector3 = Cove.GodotFormat.Vector3;
 using Serilog;
 using System.Diagnostics;
+using System.Net;
+using System.Net.Sockets;
 using System.Text.Unicode;
 using System.Text;
 using System.Reflection;
 using System.Threading.Channels;
+using Cove.Server.Networking;
 
 namespace Cove.Server
 {
@@ -83,11 +86,12 @@ namespace Cove.Server
         public List<string> WantedTags = new();
 
         public List<PreviousPlayer> PreviousPlayers = new();
+
+        public TcpListener TCPServer;
+        private List<PlayerSocket> _playerSockets = new();
         
         public void Init()
         {
-            cbThread = new(runSteamworksUpdate);
-            cbThread.Name = "Steamworks Callback Thread";
 
             networkThread = new(RunNetwork);
             networkThread.Name = "Network Thread";
@@ -242,19 +246,14 @@ namespace Cove.Server
                 Directory.CreateDirectory($"{AppDomain.CurrentDomain.BaseDirectory}plugins");
                 Log("Created plugins folder!");
             }
+            
 
-            if (!SteamAPI.Init())
-            {
-                Log("SteamAPI_Init() failed.");
-                Log("Is Steam running?");
-                return;
-            }
+            serverPlayer = new WFPlayer(new CSteamID(0), "CoveServer", new SteamNetworkingIdentity());
 
-            serverPlayer = new WFPlayer(SteamUser.GetSteamID(), SteamFriends.GetPersonaName(), new SteamNetworkingIdentity());
-
-            // thread for running steamworks callbacks
-            cbThread.IsBackground = true;
-            cbThread.Start();
+            TCPServer = TcpListener.Create(6767); // make this a config option later
+            TCPServer.Start();
+            
+            Log("TCP Server started on port 6767");
 
             // thread for getting network packets from steam
             // i wish this could be a service, but when i tried it the packets got buffered and it was a mess
@@ -289,245 +288,11 @@ namespace Cove.Server
             services["host_spawn"] = hostSpawnService;
             services["host_spawn_metal"] = hostSpawnMetalService;
 
-            Callback<LobbyCreated_t>.Create((LobbyCreated_t param) =>
+            while (true)
             {
-                SteamLobby = new CSteamID(param.m_ulSteamIDLobby);
-                SteamMatchmaking.SetLobbyJoinable(SteamLobby, true);
-                SteamMatchmaking.SetLobbyData(SteamLobby, "ref", "webfishing_gamelobby");
-                SteamMatchmaking.SetLobbyData(SteamLobby, "version", WebFishingGameVersion);
-                SteamMatchmaking.SetLobbyData(SteamLobby, "code", LobbyCode);
-                SteamMatchmaking.SetLobbyData(SteamLobby, "type", "0");
-                SteamMatchmaking.SetLobbyData(SteamLobby, "public", codeOnly ? "false" : "true");
-                SteamMatchmaking.SetLobbyData(SteamLobby, "request", "false"); // make this a option later down the line
-                if (maskMaxPlayers && MaxPlayers > 12)
-                    SteamMatchmaking.SetLobbyData(SteamLobby, "cap", $"12");
-                else
-                    SteamMatchmaking.SetLobbyData(SteamLobby, "cap", $"{MaxPlayers}");
-
-                Log("Lobby Created!");
-                Log($"Lobby Code: {LobbyCode}");
-                // set the player count in the title
-                updatePlayercount();
-
-                // Start the services.
-                actorUpdateService.StartAsync(CancellationToken.None);
-                hostSpawnService.StartAsync(CancellationToken.None);
-                hostSpawnMetalService.StartAsync(CancellationToken.None);
-
-                SteamMatchmaking.SetLobbyData(SteamLobby, "server_browser_value", "0");
-
-                string[] LOBBY_TAGS = ["talkative", "quiet", "grinding", "chill", "silly", "hardcore", "mature", "modded"];
-                for (int i = 0; i < LOBBY_TAGS.Length; i++)
-                {
-                    bool wantedTag = WantedTags.Contains(LOBBY_TAGS[i]);
-                    SteamMatchmaking.SetLobbyData(SteamLobby, $"tag_{LOBBY_TAGS[i]}", wantedTag ? "1" : "0");
-                    if (wantedTag)
-                        Log($"Added tag: {LOBBY_TAGS[i]}");
-                }
-
-                ulong epoch = (ulong)(DateTime.UtcNow - new DateTime(1970, 1, 1)).TotalSeconds;
-                SteamMatchmaking.SetLobbyData(SteamLobby, "timestamp", epoch.ToString());
-
-                /*
-                int dataCount = SteamMatchmaking.GetLobbyDataCount(SteamLobby);
-                for (int j = 0; j < dataCount; j++)
-                {
-                    string key, value;
-                    SteamMatchmaking.GetLobbyDataByIndex(SteamLobby, j, out key, 100, out value, 100);
-                    Log($"{key}: {value}");
-                }
-                */
-
-            });
-
-            Callback<LobbyChatUpdate_t>.Create((LobbyChatUpdate_t param) =>
-            {
-                CSteamID lobbyID = new CSteamID(param.m_ulSteamIDLobby);
-
-                CSteamID userChanged = new CSteamID(param.m_ulSteamIDUserChanged);
-                CSteamID userMakingChange = new CSteamID(param.m_ulSteamIDMakingChange);
-
-                EChatMemberStateChange stateChange = (EChatMemberStateChange)param.m_rgfChatMemberStateChange;
-                // Player joined the lobby
-                if (stateChange.HasFlag(EChatMemberStateChange.k_EChatMemberStateChangeEntered))
-                {
-                    string Username = SteamFriends.GetFriendPersonaName(userChanged);
-                    ulong steamID = param.m_ulSteamIDMakingChange;
-
-                    Log($"[{steamID}] {Username} is attempting to join the lobby.");
-
-                    connectionsQueued.Add(userChanged);
-                }
-
-                // Player left the lobby
-                if (stateChange.HasFlag(EChatMemberStateChange.k_EChatMemberStateChangeLeft) || stateChange.HasFlag(EChatMemberStateChange.k_EChatMemberStateChangeDisconnected))
-                {
-                    string Username = SteamFriends.GetFriendPersonaName(userChanged);
-
-                    // if player is in connectionsQueued, remove them
-                    if (connectionsQueued.Contains(userChanged))
-                        connectionsQueued.Remove(userChanged);
-
-                    // if player is in AllPlayers, remove them
-                    if (!connectionsQueued.Contains(userChanged))
-                    {
-                        var player = AllPlayers.Find(p => p.SteamId == userChanged);
-                        if (player != null)
-                        {
-                            AllPlayers.Remove(player);
-                            Log($"[{player.FisherID}] {player.Username} left. [{AllPlayers.Count}/{MaxPlayers}]");
-
-                            Dictionary<string, object> leftPacket = new();
-                            leftPacket["type"] = "user_left_weblobby";
-                            leftPacket["user_id"] = (long)player.SteamId.m_SteamID;
-                            leftPacket["reason"] = (int)0;
-                            sendPacketToPlayers(leftPacket);
-
-                            SteamNetworkingMessages.CloseSessionWithUser(ref player.identity);
-                            updatePlayercount();
-
-                            // tell all plugins that the player left
-                            loadedPlugins.ForEach(plugin => plugin.plugin.onPlayerLeave(player));
-
-                            // find the previous player and update their state
-                            var previousPlayer = PreviousPlayers.Find(p => p.SteamId == player.SteamId);
-                            if (previousPlayer != null)
-                            {
-                                previousPlayer.leftTimestamp = (uint)DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-                                previousPlayer.State = PlayerState.Left;
-                            }
-                            else
-                            {
-                                // if the player is not in the previous players list, add them
-                                var p = PreviousPlayer.FromWFPlayer(player);
-                                PreviousPlayers.Add(p);
-                                p.leftTimestamp = (uint)DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-                                p.State = PlayerState.Left;
-                            }
-                        }
-                    }
-                }
-            });
-
-            listenSocket = SteamNetworkingSockets.CreateListenSocketP2P(0, 0, []);
-
-            Callback<SteamNetworkingMessagesSessionRequest_t>.Create((SteamNetworkingMessagesSessionRequest_t param) =>
-            {
-
-                // if the player is banned reject the session request
-                if (isPlayerBanned(new CSteamID(param.m_identityRemote.GetSteamID64())))
-                {
-                    SteamNetworkingMessages.CloseSessionWithUser(ref param.m_identityRemote);
-                    return;
-                }
-
-                // get the players WFPlayer object
-                WFPlayer player = AllPlayers.Find(p => p.SteamId == param.m_identityRemote.GetSteamID());
-                if (player == null)
-                {
-                    //Log("Player not found!");
-                    SteamNetworkingMessages.CloseSessionWithUser(ref param.m_identityRemote);
-                    return;
-                }
-
-                SteamNetworkingMessages.AcceptSessionWithUser(ref param.m_identityRemote);
-                sendWebLobbyPacket(new CSteamID(param.m_identityRemote.GetSteamID64()));
-
-                player.identity = param.m_identityRemote; // update the players identity
-            });
-
-            Callback<LobbyChatMsg_t>.Create((LobbyChatMsg_t callback) =>
-            {
-
-                CSteamID userId = (CSteamID)callback.m_ulSteamIDUser;
-                byte[] data = new byte[4096]; // Max size for a message
-                EChatEntryType chatEntryType;
-
-                // Retrieve the message
-                int messageLength = SteamMatchmaking.GetLobbyChatEntry(
-                    (CSteamID)callback.m_ulSteamIDLobby,
-                    (int)callback.m_iChatID,
-                    out userId,
-                    data,
-                    data.Length,
-                    out chatEntryType
-                );
-
-                if (messageLength > 0)
-                {
-                    string lobbyMessage = Encoding.UTF8.GetString(data, 0, messageLength);
-
-                    // man i dont fucking know anymore
-                    if (String.Compare("$weblobby_join_request", lobbyMessage) == 0 || lobbyMessage.Trim() == "$weblobby_join_request")
-                    {
-                        if (AllPlayers.Contains(AllPlayers.Find(p => p.SteamId == userId)))
-                        {
-                            sendWebLobbyPacket(userId);
-                            //Log("User: " + userId + " is already in the lobby!");
-                            //Log("If player is stuck on loading screen please tell me (Meepso)");
-                            return;
-                        }
-
-                        // check if the user is banned 
-                        if (isPlayerBanned(userId))
-                        {
-                            //Log($"Player {userId} tried to join, but they are banned!");
-                            // send a steamlobby chat message to the player
-                            var rejectMessage = $"$weblobby_request_denied_deny-{userId.m_SteamID}";
-                            var rejectData = Encoding.UTF8.GetBytes(rejectMessage);
-                            SteamMatchmaking.SendLobbyChatMsg(new CSteamID(callback.m_ulSteamIDLobby), rejectData, rejectData.Count());
-                            return;
-                        }
-
-                        var acceptMessage = $"$weblobby_request_accepted-{userId.m_SteamID}";
-                        var acceptData = Encoding.UTF8.GetBytes(acceptMessage);
-                        bool suc = SteamMatchmaking.SendLobbyChatMsg(new CSteamID(callback.m_ulSteamIDLobby), acceptData, acceptData.Count());
-
-                        // make the player a wfplayer
-                        WFPlayer player = new WFPlayer(userId, SteamFriends.GetFriendPersonaName(userId), new SteamNetworkingIdentity());
-                        AllPlayers.Add(player);
-                        
-                        // if there is already a player with the same FisherID, remove them from the previous players list to prevent duplicates
-                        var sharedIDPrev = PreviousPlayers.Find(p => p.FisherID == player.FisherID);
-                        if (sharedIDPrev != null)
-                        {
-                            PreviousPlayers.Remove(sharedIDPrev); // remove the previous player with the same FisherID
-                        }
-                        
-                        var prev = PreviousPlayers.Find(p => p.SteamId == userId);
-                        if (prev != null)
-                        {
-                            PreviousPlayers.Remove(prev); // remove the previous player if they are already in the list
-                        }
-                        
-                        PreviousPlayers.Add( PreviousPlayer.FromWFPlayer(player) ); // add the player to the previous players list
-
-                        Dictionary<string, object> joinedPacket = new();
-                        joinedPacket["type"] = "user_joined_weblobby";
-                        joinedPacket["user_id"] = (long)userId.m_SteamID;
-                        sendPacketToPlayers(joinedPacket);
-
-                        Dictionary<string, object> membersPacket = new();
-                        membersPacket["type"] = "receive_weblobby";
-                        Dictionary<int, object> members = new();
-
-                        members[0] = (long)serverPlayer.SteamId.m_SteamID;
-                        for (int i = 0; i < AllPlayers.Count; i++)
-                        {
-                            members[i + 1] = (long)AllPlayers[i].SteamId.m_SteamID;
-                        }
-
-                        membersPacket["weblobby"] = members;
-                        sendPacketToPlayers(membersPacket);
-                    }
-                }
-            });
-
-            // add two to the max because the server counts as player and add one overflow player
-            if (friendsOnly)
-                SteamMatchmaking.CreateLobby(ELobbyType.k_ELobbyTypeFriendsOnly, MaxPlayers + 2);
-            else
-                SteamMatchmaking.CreateLobby(ELobbyType.k_ELobbyTypePublic, MaxPlayers + 2);
+                TcpClient client = TCPServer.AcceptTcpClient();
+                Log("Accepted new TCP connection!");
+            }
         }
 
         private bool getBoolFromString(string str)
@@ -540,15 +305,6 @@ namespace Cove.Server
                 return false;
         }
 
-        void runSteamworksUpdate()
-        {
-            while (true)
-            {
-                Thread.Sleep(1000/24); // 24hz
-                SteamAPI.RunCallbacks();
-            }
-        }
-
         void RunNetwork()
         {
             while (true)
@@ -556,23 +312,15 @@ namespace Cove.Server
                 bool didWork = false;
                 try
                 {
-                    for (int i = 0; i < 7; i++)
+                    // loop though all player sockets and check for packets
+                    for (int i = 0; i < _playerSockets.Count; i++)
                     {
-                        List<NetworkingMessage> messages = ReceiveMessagesOnChannel(i, 50);
-                        if (messages.Count == 0)
-                            // Skip processing this channel if no messages were received.
-                            continue;
-
-                        didWork = true;
-                        for (int j = 0; j < messages.Count; j++)
+                        PlayerSocket ps = _playerSockets[i];
+                        if (ps.Stream.DataAvailable)
                         {
-                            if (i == 3 && messages[j].size > 50000)
-                            {
-                                string UserName = SteamFriends.GetFriendPersonaName(new CSteamID(messages[j].identity));
-                                Log($"[{UserName}] Sent a chalk packet of size {messages[j].size} bytes");
-                                Log($"Due to the size of this packet, there is a chance it will not be processed correctly.");
-                            }
-                            OnNetworkPacket(messages[j].payload, new CSteamID(messages[j].identity));
+                            didWork = true;
+                            var packet = NetworkUtils.ReadPacket(ps.Stream);
+                            OnNetworkPacket(packet, ps.SteamID);
                         }
                     }
                 }
