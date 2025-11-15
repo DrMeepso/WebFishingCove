@@ -21,6 +21,7 @@ using Cove.Server.Utils;
 using Cove.Server.Actor;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Text;
 using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace Cove.Server
@@ -35,7 +36,7 @@ namespace Cove.Server
         byte[] writePacket(Dictionary<string, object> packet)
         {
             byte[] godotBytes = GodotWriter.WriteGodotPacket(packet);
-            return GzipHelper.CompressGzip(godotBytes);
+            return godotBytes; // GzipHelper.CompressGzip(godotBytes);
         }
 
         public void sendPacketToPlayers(Dictionary<string, object> packet)
@@ -50,18 +51,25 @@ namespace Cove.Server
         }
 
         // send a packet to a specific player using tcp
-        public void sendPacketToPlayer(Dictionary<string, object> packet, CSteamID id, CSteamID from = default)
+        public void sendPacketToPlayer(Dictionary<string, object> packet, CSteamID id, int from = 0)
         {
             
             // get the wfPlayer object
             var player = _playerSockets.Find(p => p.SteamID == id);
+
+            if (player == null)
+            {
+                Log($"[TCP] sendPacketToPlayer: no socket found for SteamID {id}");
+                return;
+            }
             
             Dictionary<string, object> packetHeader = new Dictionary<string, object>
             {
-                { "packet_data", packet }
+                { "identity", from }, // server's steam id
+                { "payload", packet }
             };
             
-            byte[] packetBytes = writePacket(packet);
+            byte[] packetBytes = writePacket(packetHeader);
             
             SendWebfishingPacket(player.ConnectionID, packetBytes);
         }

@@ -1,4 +1,5 @@
-﻿using Cove.Server.Actor;
+﻿using System.Text;
+using Cove.Server.Actor;
 using Newtonsoft.Json.Linq;
 using Steamworks;
 
@@ -50,6 +51,8 @@ partial class CoveServer
                     ["status"] = "success"
                 };
 
+                plrSocket.IsAuthenticated = true;
+                
                 SendMetaPacket(ConnectionID, System.Text.Encoding.UTF8.GetBytes(authResponse.ToString()));
 
                 // make the player a wfplayer
@@ -75,6 +78,8 @@ partial class CoveServer
                 Dictionary<string, object> joinedPacket = new();
                 joinedPacket["type"] = "user_joined_weblobby";
                 joinedPacket["user_id"] = (long)plrSocket.SteamID.m_SteamID;
+                var d = writePacket(joinedPacket);
+                
                 sendPacketToPlayers(joinedPacket);
 
                 Dictionary<string, object> membersPacket = new();
@@ -163,6 +168,7 @@ partial class CoveServer
     
     public void SendWebfishingPacket(string ConnectionID, byte[] data)
     {
+        
         byte[] webfishingPrefix = System.Text.Encoding.UTF8.GetBytes("W");
         byte[] packetData = new byte[webfishingPrefix.Length + data.Length];
         Buffer.BlockCopy(webfishingPrefix, 0, packetData, 0, webfishingPrefix.Length);
@@ -181,6 +187,7 @@ partial class CoveServer
             byte[] finalPacket = new byte[lengthBytes.Length + packetData.Length];
             Buffer.BlockCopy(lengthBytes, 0, finalPacket, 0, lengthBytes.Length);
             Buffer.BlockCopy(packetData, 0, finalPacket, lengthBytes.Length, packetData.Length);
+            
             socket.Stream.Write(finalPacket, 0, finalPacket.Length);
         }
         else
@@ -188,5 +195,4 @@ partial class CoveServer
             Log($"Failed to send webfishing packet to {ConnectionID}: Socket not found");
         }
     }
-    
 }

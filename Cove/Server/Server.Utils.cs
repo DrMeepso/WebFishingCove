@@ -276,7 +276,7 @@ namespace Cove.Server
             chatPacket["zone"] = "main_zone";
             chatPacket["zone_owner"] = 1;
 
-            if (id.m_SteamID == SteamUser.GetSteamID().m_SteamID)
+            if (id.m_SteamID == 0)
             {
                 Log($"{msg}");
                 return;
@@ -326,6 +326,7 @@ namespace Cove.Server
 
         void updatePlayercount()
         {
+            return; // disabled for now
             string serverName = $"{ServerName}";
 
             Console.Title = $"Cove Dedicated Server, {AllPlayers.Count} players!";

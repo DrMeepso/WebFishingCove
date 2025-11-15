@@ -41,12 +41,17 @@ namespace Cove.Server
         public string WebFishingGameVersion = "1.12"; // make sure to update this when the game updates!
         public int MaxPlayers = 20;
         public string ServerName = "A Cove Dedicated Server";
-        public string LobbyCode = new string(Enumerable.Range(0, 5).Select(_ => "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"[new Random().Next(36)]).ToArray());
+
+        public string LobbyCode = new string(Enumerable.Range(0, 5)
+            .Select(_ => "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"[new Random().Next(36)]).ToArray());
+
         public bool codeOnly = true;
         public bool ageRestricted = false;
         public bool maskMaxPlayers = false;
 
-        public string joinMessage = "This is a Cove dedicated server!\nPlease report any issues to the github (xr0.xyz/cove)";
+        public string joinMessage =
+            "This is a Cove dedicated server!\nPlease report any issues to the github (xr0.xyz/cove)";
+
         public bool displayJoinMessage = true;
 
         public float rainMultiplyer = 1f;
@@ -89,10 +94,9 @@ namespace Cove.Server
 
         public TcpListener TCPServer;
         private List<PlayerSocket> _playerSockets = new();
-        
+
         public void Init()
         {
-
             networkThread = new(RunNetwork);
             networkThread.Name = "Network Thread";
 
@@ -205,6 +209,7 @@ namespace Cove.Server
                         {
                             tags[i] = tags[i].Trim().ToLower();
                         }
+
                         WantedTags = tags.ToList();
                         break;
 
@@ -226,7 +231,6 @@ namespace Cove.Server
                 }
 
                 Log($"Set \"{key}\" to \"{config[key]}\"");
-
             }
 
             Log("Server setup based on config!");
@@ -239,20 +243,20 @@ namespace Cove.Server
 
             if (Directory.Exists($"{AppDomain.CurrentDomain.BaseDirectory}plugins"))
             {
-                loadAllPlugins();
+                loadAllPlugins(true);
             }
             else
             {
                 Directory.CreateDirectory($"{AppDomain.CurrentDomain.BaseDirectory}plugins");
                 Log("Created plugins folder!");
             }
-            
+
 
             serverPlayer = new WFPlayer(new CSteamID(0), "CoveServer", new SteamNetworkingIdentity());
 
             TCPServer = TcpListener.Create(6767); // make this a config option later
             TCPServer.Start();
-            
+
             Log("TCP Server started on port 6767");
 
             // thread for getting network packets from steam
@@ -276,7 +280,8 @@ namespace Cove.Server
             // Create a logger for each service that we need to run.
             Logger<ActorUpdateService> actorServiceLogger = new Logger<ActorUpdateService>(loggerFactory);
             Logger<HostSpawnService> hostSpawnServiceLogger = new Logger<HostSpawnService>(loggerFactory);
-            Logger<HostSpawnMetalService> hostSpawnMetalServiceLogger = new Logger<HostSpawnMetalService>(loggerFactory);
+            Logger<HostSpawnMetalService> hostSpawnMetalServiceLogger =
+                new Logger<HostSpawnMetalService>(loggerFactory);
 
             // Create the services that we need to run.
             IHostedService actorUpdateService = new ActorUpdateService(actorServiceLogger, this);
@@ -323,16 +328,15 @@ namespace Cove.Server
 
                         NetworkStream stream = ps.Stream;
                         // extra debug: log that we're checking this connection
-                        
+
                         while (stream.DataAvailable)
                         {
                             didWork = true;
                             try
                             {
-                                
                                 // log how many bytes are available
                                 //Log($"[TCP] Connection {ps.ConnectionID}: {stream.DataAvailable} bytes available to read.");
-                                
+
                                 // each packet is prefixed with a 4 byte int for the length and a 'W' or 'M' byte
                                 byte[] packet = NetworkUtils.ReadPacket(stream);
 
@@ -350,21 +354,95 @@ namespace Cove.Server
                                 // log payload as hex (first up to 64 bytes)
                                 int logLen = Math.Min(payload.Length, 64);
                                 string hex = BitConverter.ToString(payload, 0, logLen);
-                                Log($"[TCP] Connection {ps.ConnectionID}: type='{packetType}', payloadLength={payload.Length}, payloadHex(first {logLen})={hex}");
+                                //Log($"[TCP] Connection {ps.ConnectionID}: type='{packetType}', payloadLength={payload.Length}, payloadHex(first {logLen})={hex}");
 
                                 switch (packetType)
                                 {
                                     case 'W':
-                                        Log($"[TCP] Connection {ps.ConnectionID}: handling 'W' packet, IsAuthenticated={ps.IsAuthenticated}, SteamID={ps.SteamID.m_SteamID}");
+                                        //Log($"[TCP] Connection {ps.ConnectionID}: handling 'W' packet, IsAuthenticated={ps.IsAuthenticated}, SteamID={ps.SteamID.m_SteamID}");
                                         if (ps.IsAuthenticated)
                                         {
-                                            Log("[TCP] Connection {ps.ConnectionID}: passing 'W' packet to OnNetworkPacket");
+                                            //Log("[TCP] Connection {ps.ConnectionID}: passing 'W' packet to OnNetworkPacket");
+
+                                            var pkt = readPacket(payload);
+
+                                            if (pkt == null)
+                                            {
+                                                Log($"[TCP] Connection {ps.ConnectionID}: readPacket returned null");
+                                                break;
+                                            }
+
+                                            // Safely extract payload and identity
+                                            Dictionary<string, object>? payloadDict = null;
+                                            if (pkt.ContainsKey("payload"))
+                                                payloadDict = pkt["payload"] as Dictionary<string, object>;
+
+                                            if (payloadDict == null)
+                                            {
+                                                Log($"[TCP] Connection {ps.ConnectionID}: packet payload missing or invalid");
+                                                break;
+                                            }
+
+                                            object identityObj = pkt.ContainsKey("identity") ? pkt["identity"] : 0;
+                                            int identity = 0;
+                                            try
+                                            {
+                                                identity = Convert.ToInt32(identityObj);
+                                            }
+                                            catch (Exception)
+                                            {
+                                                // fallback to 0 if conversion fails
+                                                identity = 0;
+                                            }
+
+                                            object targetObj = pkt.ContainsKey("target") ? pkt["target"] : "all";
+                                            string targetStr = targetObj?.ToString() ?? "all";
+
+                                            switch (targetStr)
+                                            {
+                                                case "steamlobby":
+                                                case "all":
+                                                    // resend the packet to all players
+                                                    foreach (var player in _playerSockets)
+                                                    {
+                                                        sendPacketToPlayer(payloadDict, player.SteamID, identity);
+                                                    }
+                                                    OnNetworkPacket(payloadDict, ps.SteamID);
+                                                    break;
+                                                case "peers": // resend the packet to all players except the sender
+                                                    foreach (var player in _playerSockets)
+                                                    {
+                                                        if (player.SteamID != ps.SteamID)
+                                                        {
+                                                            sendPacketToPlayer(payloadDict, player.SteamID, identity);
+                                                        }
+                                                    }
+                                                    OnNetworkPacket(payloadDict, ps.SteamID);
+                                                    break;
+                                                default:
+                                                    // if the target is a specific steamid, send it to that player only
+                                                    // try parse the target to a int
+                                                    if (UInt64.TryParse(targetStr, out ulong targetSteamID))
+                                                    {
+                                                        sendPacketToPlayer(payloadDict, new CSteamID(targetSteamID), identity);
+                                                    }
+                                                    else
+                                                    {
+                                                        Log($"[TCP] Connection {ps.ConnectionID}: unknown target '{targetStr}' in 'W' packet");
+                                                    }
+
+                                                    break;
+                                            }
+                                            
+
                                             //OnNetworkPacket(payload, ps.SteamID);
                                         }
                                         else
                                         {
-                                            Log($"[TCP] Connection {ps.ConnectionID}: received 'W' packet from unauthenticated connection, ignoring.");
+                                            Log(
+                                                $"[TCP] Connection {ps.ConnectionID}: received 'W' packet from unauthenticated connection, ignoring.");
                                         }
+
                                         break;
 
                                     case 'M':
@@ -378,7 +456,8 @@ namespace Cove.Server
                             }
                             catch (Exception ex)
                             {
-                                Log($"[TCP] Error while reading/handling packet from connection {ps.ConnectionID}: {ex}");
+                                Log(
+                                    $"[TCP] Error while reading/handling packet from connection {ps.ConnectionID}: {ex}");
                                 // break the inner loop so we don't spin on a broken stream
                                 break;
                             }
@@ -417,7 +496,6 @@ namespace Cove.Server
 
         void OnPlayerChat(string message, CSteamID id)
         {
-
             WFPlayer sender = AllPlayers.Find(p => p.SteamId == id);
             if (sender == null)
             {
@@ -460,5 +538,11 @@ namespace Cove.Server
         {
             logger.Error(value);
         }
+
+        public bool ModeratePacket(CSteamID senderId, Dictionary<string, object> packet)
+        {
+            return true;
+        }
     }
 }
+

@@ -25,9 +25,8 @@ namespace Cove.Server
     {
 
         // TODO: Make this a switch statement
-        void OnNetworkPacket(byte[] packet, CSteamID sender)
+        void OnNetworkPacket(Dictionary<string, object> packetData, CSteamID sender)
         {
-            Dictionary<string, object> packetInfo = readPacket(GzipHelper.DecompressGzip(packet));
 
             // just in case!
             if (isPlayerBanned(sender))
@@ -37,10 +36,10 @@ namespace Cove.Server
             foreach (var loadedPlugin in loadedPlugins)
             {
                 if (fromPlayer != null)
-                    loadedPlugin.plugin.onNetworkPacket(fromPlayer, packetInfo);
+                    loadedPlugin.plugin.onNetworkPacket(fromPlayer, packetData);
             }
 
-            switch ((string)packetInfo["type"])
+            switch ((string)packetData["type"])
             {
                 case "handshake_request":
                     {
@@ -59,7 +58,7 @@ namespace Cove.Server
                         }
                         Dictionary<string, object> hostPacket = new();
                         hostPacket["type"] = "recieve_host";
-                        hostPacket["host_id"] = SteamUser.GetSteamID().m_SteamID.ToString();
+                        hostPacket["host_id"] = "0";
                         sendPacketToPlayers(hostPacket);
 
                         if (isPlayerAdmin(sender))
@@ -73,8 +72,8 @@ namespace Cove.Server
 
                 case "instance_actor":
                     {
-                        string type = (string)((Dictionary<string, object>)packetInfo["params"])["actor_type"];
-                        long actorID = (long)((Dictionary<string, object>)packetInfo["params"])["actor_id"];
+                        string type = (string)((Dictionary<string, object>)packetData["params"])["actor_type"];
+                        long actorID = (long)((Dictionary<string, object>)packetData["params"])["actor_id"];
 
                         // all actor types that should not be spawned by anyone but the server!
                         List<string> illegalTypes = ["fish_spawn_alien", "fish_spawn", "raincloud", "ambient_bird", "void_portal", "metal_spawn"];
@@ -120,10 +119,10 @@ namespace Cove.Server
 
                 case "actor_update":
                     {
-                        WFPlayer thisPlayer = AllPlayers.Find(p => p.InstanceID == (long)packetInfo["actor_id"]);
+                        WFPlayer thisPlayer = AllPlayers.Find(p => p.InstanceID == (long)packetData["actor_id"]);
                         if (thisPlayer != null)
                         {
-                            Vector3 position = (Vector3)packetInfo["pos"];
+                            Vector3 position = (Vector3)packetData["pos"];
                             thisPlayer.pos = position;
                         }
                     }
@@ -142,9 +141,9 @@ namespace Cove.Server
 
                 case "actor_action":
                     {
-                        if ((string)packetInfo["action"] == "_wipe_actor")
+                        if ((string)packetData["action"] == "_wipe_actor")
                         {
-                            long actorToWipe = (long)((Dictionary<int, object>)packetInfo["params"])[0];
+                            long actorToWipe = (long)((Dictionary<int, object>)packetData["params"])[0];
                             WFActor serverInst = serverOwnedInstances.Find(i => i.InstanceID == actorToWipe);
                             if (serverInst != null)
                             {
@@ -170,7 +169,7 @@ namespace Cove.Server
 
                 case "chalk_packet":
                     {
-                        long canvasID = (long)packetInfo["canvas_id"];
+                        long canvasID = (long)packetData["canvas_id"];
                         Chalk.ChalkCanvas canvas = chalkCanvas.Find(c => c.canvasID == canvasID);
 
                         if (canvas == null)
@@ -180,14 +179,14 @@ namespace Cove.Server
                             chalkCanvas.Add(canvas);
                         }
 
-                        canvas.chalkUpdate((Dictionary<int, object>)packetInfo["data"]);
+                        canvas.chalkUpdate((Dictionary<int, object>)packetData["data"]);
 
                     }
                     break;
 
                 case "message":
                     {
-                        string Message = (string)packetInfo["message"];
+                        string Message = (string)packetData["message"];
                         if (Message.StartsWith("%u:")) // Format for a normal chat message
                         {
                             string playerMessage = Message.Replace("%u: ", "");
