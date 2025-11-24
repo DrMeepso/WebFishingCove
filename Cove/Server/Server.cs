@@ -14,20 +14,20 @@
    limitations under the License.
 */
 
-using Steamworks;
-using Cove.Server.Plugins;
+using System.Diagnostics;
+using System.Reflection;
+using System.Text;
+using System.Text.Unicode;
+using System.Threading.Channels;
 using Cove.Server.Actor;
+using Cove.Server.HostedServices;
+using Cove.Server.Plugins;
 using Cove.Server.Utils;
 using Microsoft.Extensions.Hosting;
-using Cove.Server.HostedServices;
 using Microsoft.Extensions.Logging;
-using Vector3 = Cove.GodotFormat.Vector3;
 using Serilog;
-using System.Diagnostics;
-using System.Text.Unicode;
-using System.Text;
-using System.Reflection;
-using System.Threading.Channels;
+using Steamworks;
+using Vector3 = Cove.GodotFormat.Vector3;
 
 namespace Cove.Server
 {
@@ -606,13 +606,35 @@ namespace Cove.Server
             Environment.Exit(0);
         }
 
-        void OnPlayerChat(string message, CSteamID id)
+        /// <summary>
+        ///  Handler & parser for player chat messages, calling plugins' onChatMessage hooks.
+        /// </summary>
+        /// <param name="message">
+        /// Chat contents
+        /// </param>
+        /// <param name="from">
+        /// SteamID of the sender
+        /// </param>
+        /// <param name="local">
+        /// Whether the message was marked as by sender
+        /// </param>
+        /// <param name="position">
+        /// Vector3 Position reported by sender
+        /// </param>
+        /// <param name="zone">Name of zone reported by sender</param>
+        /// <returns></returns>
+        void OnPlayerChat(
+            string message,
+            CSteamID from,
+            bool local = false,
+            Vector3? position = null,
+            string zone = "global"
+        )
         {
-
-            WFPlayer sender = AllPlayers.Find(p => p.SteamId == id);
+            WFPlayer sender = AllPlayers.Find(p => p.SteamId == from);
             if (sender == null)
             {
-                Log($"[UNKNOWN] {id}: {message}");
+                Log($"[UNKNOWN] {from}: {message}");
                 // should probbaly kick the player here
                 return;
             }
@@ -636,9 +658,9 @@ namespace Cove.Server
                 }
             }
 
-            foreach (PluginInstance plugin in loadedPlugins)
+            foreach (PluginInstance p in loadedPlugins)
             {
-                plugin.plugin.onChatMessage(sender, message);
+              p.plugin.handleChatMessage(sender, message, local, position, zone);
             }
         }
 
