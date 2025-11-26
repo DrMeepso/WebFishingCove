@@ -17,7 +17,7 @@
 
 using Steamworks;
 using Cove.Server.Plugins;
-using Cove.GodotFormat;
+using System.Numerics;
 using Cove.Server.Actor;
 using Cove.Server.Utils;
 
@@ -115,7 +115,7 @@ namespace Cove.Server
             return serverOwnedInstances.Find(a => a.InstanceID == ID);
         }
 
-        public WFActor spawnGenericActor(string type, Vector3 pos = null)
+        public WFActor spawnGenericActor(string type, Vector3 pos = default)
         {
             Dictionary<string, object> spawnPacket = new Dictionary<string, object>();
 
@@ -131,8 +131,8 @@ namespace Cove.Server
             Dictionary<string, object> instanceSpacePrams = new Dictionary<string, object>();
             spawnPacket["params"] = instanceSpacePrams;
 
-            if (pos == null)
-                pos = Vector3.zero;
+            if (pos == default)
+                pos = Vector3.Zero;
 
             WFActor actor = new WFActor(IId, type, pos);
             lock (serverActorListLock)

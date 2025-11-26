@@ -13,13 +13,7 @@
    See the License for the specific language governing permissions and
    limitations under the License.
 */
-
-
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace Cove.GodotFormat
 {
@@ -74,33 +68,46 @@ namespace Cove.GodotFormat
             {
                 writeArray((Dictionary<int, object>)packet, bw);
             }
-            else if (packet is Vector3)
+            else if (packet is System.Numerics.Vector3)
             {
-                writeVector3((Vector3)packet, bw);
-            } else if (packet is Vector2)
+                writeVector3((System.Numerics.Vector3)packet , bw);
+            } 
+            else if (packet is System.Numerics.Vector2)
             {
-                writeVector2((Vector2)packet, bw);
-            } else
+                writeVector2((System.Numerics.Vector2)packet, bw);
+            }
+            // Ugly, but works.
+            else if (packet is Cove.GodotFormat.Vector3 godotV3)
+            {
+                System.Numerics.Vector3 converted = godotV3;
+                writeVector3(converted, bw);
+            }
+            else if (packet is Cove.GodotFormat.Vector2 godotV2)
+            {
+                System.Numerics.Vector2 converted = godotV2;
+                writeVector2(converted, bw);
+            } 
+            else
             {
                 throw new Exception("Unknown type: " + packet.GetType());
             }
         }
 
-        private static void writeVector2(Vector2 packet, BinaryWriter bw)
+        private static void writeVector2(System.Numerics.Vector2 packet, BinaryWriter bw)
         {
-            bw.Write((int)5); // write v2 header
+            bw.Write(5); // write v2 header
 
-            bw.Write((Single)packet.x);
-            bw.Write((Single)packet.y);
+            bw.Write(packet.X);
+            bw.Write(packet.Y);
         }
 
-        private static void writeVector3(Vector3 packet, BinaryWriter bw)
+        private static void writeVector3(System.Numerics.Vector3 packet, BinaryWriter bw)
         {
-            bw.Write((int)7); // write v3 header
+            bw.Write(7); // write v3 header
 
-            bw.Write((Single)packet.x);
-            bw.Write((Single)packet.y);
-            bw.Write((Single)packet.z);
+            bw.Write(packet.X);
+            bw.Write(packet.Y);
+            bw.Write(packet.Z);
         }
 
         private static void writeBool(bool packet, BinaryWriter bw)

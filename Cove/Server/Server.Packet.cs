@@ -15,7 +15,7 @@
 */
 
 using Steamworks;
-using Cove.GodotFormat;
+using System.Numerics;
 using Cove.Server.Actor;
 using Cove.Server.Utils;
 
@@ -110,7 +110,7 @@ namespace Cove.Server
                             }
 
                         } else {
-                            WFActor cActor = new WFActor(actorID, type, Vector3.zero, Vector3.zero);
+                            WFActor cActor = new WFActor(actorID, type, Vector3.Zero, Vector3.Zero);
                             cActor.owner = sender;
                             allActors.Add(cActor);
                         }
