@@ -14,16 +14,16 @@
    limitations under the License.
 */
 
-using Steamworks;
 using Cove.GodotFormat;
 using Cove.Server.Actor;
+using Cove.Server.Plugins;
 using Cove.Server.Utils;
+using Steamworks;
 
 namespace Cove.Server
 {
     partial class CoveServer
     {
-
         // TODO: Make this a switch statement
         void OnNetworkPacket(byte[] packet, CSteamID sender)
         {
@@ -171,17 +171,25 @@ namespace Cove.Server
                 case "chalk_packet":
                     {
                         long canvasID = (long)packetInfo["canvas_id"];
-                        Chalk.ChalkCanvas canvas = chalkCanvas.Find(c => c.canvasID == canvasID);
-
+                        Chalk.ChalkCanvas? canvas = chalkCanvas.Find(c => c.canvasID == canvasID);
                         if (canvas == null)
                         {
-                            
-                            canvas = new Chalk.ChalkCanvas(canvasID);
+                            canvas = new Chalk.ChalkCanvas(canvasID, this);
                             chalkCanvas.Add(canvas);
                         }
 
                         canvas.chalkUpdate((Dictionary<int, object>)packetInfo["data"]);
-
+                        WFPlayer? from = AllPlayers.Find(p =>
+                            p.SteamId.m_SteamID == sender.m_SteamID
+                        );
+                        foreach (PluginInstance p in loadedPlugins)
+                        {
+                            p.plugin.onChalkUpdate(
+                                from,
+                                canvasID,
+                                (Dictionary<int, object>)packetInfo["data"]
+                            );
+                        }
                     }
                     break;
 
@@ -205,7 +213,6 @@ namespace Cove.Server
                         }
                     }
                     break;
-
             }
         }
 
@@ -239,7 +246,12 @@ namespace Cove.Server
 
                     for (int index = 0; index < chunks.Count; index++)
                     {
-                        Dictionary<string, object> chalkPacket = new Dictionary<string, object> { { "type", "chalk_packet" }, { "canvas_id", canvas.canvasID }, { "data", chunks[index] } };
+                        Dictionary<string, object> chalkPacket = new Dictionary<string, object>
+                        {
+                            { "type", "chalk_packet" },
+                            { "canvas_id", canvas.canvasID },
+                            { "data", chunks[index] },
+                        };
                         sendPacketToPlayer(chalkPacket, recipient);
                         Thread.Sleep(10);
                     }
