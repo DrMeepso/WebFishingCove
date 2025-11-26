@@ -13,6 +13,7 @@
    See the License for the specific language governing permissions and
    limitations under the License.
 */
+using System.Numerics;
 
 namespace Cove.GodotFormat
 {
@@ -141,21 +142,21 @@ namespace Cove.GodotFormat
             return quat;
         }
 
-        private Vector2 readVector2()
+        private System.Numerics.Vector2 readVector2()
         {
             float x = reader.ReadSingle();
             float y = reader.ReadSingle();
-            Vector2 newVec = new(x, y);
+            System.Numerics.Vector2 newVec = new(x, y);
 
             return newVec;
         }
 
-        private Vector3 readVector3()
+        private System.Numerics.Vector3 readVector3()
         {
             float x = reader.ReadSingle();
             float y = reader.ReadSingle();
             float z = reader.ReadSingle();
-            Vector3 newVec = new(x, y, z);
+            System.Numerics.Vector3 newVec = new(x, y, z);
 
             return newVec;
         }

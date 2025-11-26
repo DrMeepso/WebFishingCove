@@ -1,4 +1,4 @@
-﻿using Cove.GodotFormat;
+﻿using System.Numerics;
 using Serilog;
 using System;
 
@@ -61,7 +61,7 @@ namespace Cove.Server.Chalk
                 {
                     Dictionary<int, object> arr = (Dictionary<int, object>)packet[i-1];
                     Vector2 vector2 = (Vector2)arr[0];
-                    Vector2 pos = new Vector2((int)Math.Round(vector2.x), (int)Math.Round(vector2.y));
+                    Vector2 pos = new Vector2((int)Math.Round(vector2.X), (int)Math.Round(vector2.Y));
 
                     if (expendedPixels.Contains(pos))
                     {
@@ -81,7 +81,7 @@ namespace Cove.Server.Chalk
                 {
                     Dictionary<int, object> arr = (Dictionary<int, object>)packet[i];
                     Vector2 vector2 = (Vector2)arr[0];
-                    Vector2 pos = new Vector2((int)Math.Round(vector2.x), (int)Math.Round(vector2.y));
+                    Vector2 pos = new Vector2((int)Math.Round(vector2.X), (int)Math.Round(vector2.Y));
 
                     chalkImage[pos] = (int)((Int64)arr[1]);
                 }

@@ -21,7 +21,7 @@ using Cove.Server.Utils;
 using Microsoft.Extensions.Hosting;
 using Cove.Server.HostedServices;
 using Microsoft.Extensions.Logging;
-using Vector3 = Cove.GodotFormat.Vector3;
+using System.Numerics;
 using Serilog;
 using System.Diagnostics;
 using System.Text.Unicode;
