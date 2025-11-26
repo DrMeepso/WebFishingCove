@@ -1,18 +1,19 @@
-﻿using Cove.GodotFormat;
+﻿using System;
+using Cove.GodotFormat;
 using Serilog;
-using System;
 
 namespace Cove.Server.Chalk
 {
     public class ChalkCanvas
     {
-
         public long canvasID;
+        public CoveServer server;
         public Dictionary<Vector2, int> chalkImage = new Dictionary<Vector2, int>();
 
-        public ChalkCanvas(long canvasID)
+        public ChalkCanvas(long canvasID, CoveServer server)
         {
             this.canvasID = canvasID;
+            this.server = server;
         }
 
         public void drawChalk(Vector2 position, int color)
@@ -20,15 +21,57 @@ namespace Cove.Server.Chalk
             int[] allowedCanvas = { 0, 1, 2, 3 };
             if (!Array.Exists(allowedCanvas, element => element == canvasID))
             {
+                // TODO: Should not silently error this
                 return;
             }
 
             chalkImage[position] = color;
+            server.sendPacketToPlayers(
+                new Dictionary<string, object>
+                {
+                    { "type", "chalk_packet" },
+                    { "canvas_id", canvasID },
+                    {
+                        "chalk_data",
+                        new Dictionary<int, object> { { 0, new object[] { position, color } } }
+                    },
+                    { "channel", 3 },
+                }
+            );
+        }
+
+        public void drawChalk(Array[] transformations)
+        {
+            int[] allowedCanvas = { 0, 1, 2, 3 };
+            if (!Array.Exists(allowedCanvas, element => element == canvasID))
+            {
+                // TODO: Should not silently error this
+                return;
+            }
+            var chalkData = new Dictionary<int, object>();
+            for (int i = 0; i < transformations.Length; i++)
+            // foreach (int[] transformation in transformations)
+            {
+                int[] transformation = (int[])transformations[i];
+                var coords = new Vector2(transformation[0], transformation[1]);
+                var color = transformation[2];
+                chalkImage[coords] = color;
+                chalkData.Add(i, new object[] { coords, color });
+            }
+
+            server.sendPacketToPlayers(
+                new Dictionary<string, object>
+                {
+                    { "type", "chalk_packet" },
+                    { "canvas_id", canvasID },
+                    { "data", chalkData },
+                    { "channel", 3 },
+                }
+            );
         }
 
         public Dictionary<int, object> getChalkPacket()
         {
-
             Dictionary<int, object> packet = new Dictionary<int, object>();
             ulong i = 0;
             foreach (KeyValuePair<Vector2, int> entry in chalkImage.ToList())
@@ -59,9 +102,12 @@ namespace Cove.Server.Chalk
                 List<Vector2> expendedPixels = new List<Vector2>(chalkImage.Keys);
                 for (int i = packet.Count; i >= 0; i--)
                 {
-                    Dictionary<int, object> arr = (Dictionary<int, object>)packet[i-1];
+                    Dictionary<int, object> arr = (Dictionary<int, object>)packet[i - 1];
                     Vector2 vector2 = (Vector2)arr[0];
-                    Vector2 pos = new Vector2((int)Math.Round(vector2.x), (int)Math.Round(vector2.y));
+                    Vector2 pos = new Vector2(
+                        (int)Math.Round(vector2.x),
+                        (int)Math.Round(vector2.y)
+                    );
 
                     if (expendedPixels.Contains(pos))
                     {
@@ -72,8 +118,9 @@ namespace Cove.Server.Chalk
                     chalkImage[pos] = (int)((Int64)arr[1]);
                 }
 
-                Console.WriteLine("A packet that was passed to the Fallback function was processed successfully");
-
+                Console.WriteLine(
+                    "A packet that was passed to the Fallback function was processed successfully"
+                );
             }
             else
             {
@@ -81,7 +128,10 @@ namespace Cove.Server.Chalk
                 {
                     Dictionary<int, object> arr = (Dictionary<int, object>)packet[i];
                     Vector2 vector2 = (Vector2)arr[0];
-                    Vector2 pos = new Vector2((int)Math.Round(vector2.x), (int)Math.Round(vector2.y));
+                    Vector2 pos = new Vector2(
+                        (int)Math.Round(vector2.x),
+                        (int)Math.Round(vector2.y)
+                    );
 
                     chalkImage[pos] = (int)((Int64)arr[1]);
                 }
