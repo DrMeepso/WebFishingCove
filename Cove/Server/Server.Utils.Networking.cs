@@ -65,6 +65,17 @@ namespace Cove.Server
             GCHandle handle = GCHandle.Alloc(packetBytes, GCHandleType.Pinned);
             IntPtr dataPointer = handle.AddrOfPinnedObject();
 
+            // enum CHANNELS { 
+            //     ACTOR_UPDATE , 
+            //     ACTOR_ACTION , 
+            //     GAME_STATE , 
+            //     CHALK , 
+            //     GUITAR , 
+            //     ACTOR_ANIMATION , 
+            //     SPEECH , 
+            // } 
+            int channel = packet.ContainsKey("channel") ? (int)packet["channel"] : 2;
+
             SteamNetworkingMessages.SendMessageToUser(ref player.identity, dataPointer, (uint)packetBytes.Length, 8, 2);
 
             handle.Free(); // free the handle
