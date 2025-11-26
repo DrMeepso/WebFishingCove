@@ -55,6 +55,16 @@ namespace Cove.Server
 
             sendBlacklistPacketToAll(id.m_SteamID.ToString());
         }
+        public void unbanPlayer(CSteamID id)
+        {
+            // var player = new WFPlayer(
+            //     id,
+            //     Steamworks.SteamFriends.GetFriendPersonaName(id),
+            //     new SteamNetworkingIdentity()
+            // );
+            // plugin.plugin.onPlayerUnbanned(player);
+            unwriteFromBansFile(id);
+        }
 
         public bool isPlayerBanned(CSteamID id)
         {
@@ -94,7 +104,32 @@ namespace Cove.Server
             {
                 try
                 {
-                    File.AppendAllLines($"{AppDomain.CurrentDomain.BaseDirectory}bans.txt", [entry]);
+                    File.AppendAllLines(
+                        $"{AppDomain.CurrentDomain.BaseDirectory}bans.txt",
+                        [entry]
+                    );
+                }
+                catch (IOException e)
+                {
+                    logger.Warning($"Error banning player: {e.ToString()}");
+                }
+            }
+        }
+
+        private void unwriteFromBansFile(CSteamID id)
+        {
+            string username = PreviousPlayers.Find(p => p.SteamId == id)?.Username ?? "Unknown";
+            lock (BanLock)
+            {
+                try
+                {
+                    var fileContent = File.ReadAllLines(
+                        $"{AppDomain.CurrentDomain.BaseDirectory}bans.txt"
+                    );
+                    File.WriteAllLines(
+                        $"{AppDomain.CurrentDomain.BaseDirectory}bans.txt",
+                        fileContent.Where(line => !line.Contains(id.m_SteamID.ToString())).ToArray()
+                    );
                 }
                 catch (IOException e)
                 {

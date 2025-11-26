@@ -322,6 +322,7 @@ public class ChatCommands : CovePlugin
         UnregisterCommand("spawn");
         UnregisterCommand("kick");
         UnregisterCommand("ban");
+        UnregisterCommand("unban");
         UnregisterCommand("setjoinable");
         UnregisterCommand("refreshadmins");
         UnregisterCommand("uptime");
