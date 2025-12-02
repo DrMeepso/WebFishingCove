@@ -1,35 +1,6 @@
-﻿using System.Numerics;
-
-namespace Cove.GodotFormat
+﻿namespace Cove.GodotFormat
 {
-    // Proxy classes for backward compatibility with plugins that reply on these types and not the System.Numerics ones
-    [Obsolete("Use System.Numerics.Vector2 instead")]
-    public struct Vector2
-    {
-        public float x;
-        public float y;
-
-        public Vector2(float x, float y)
-        {
-            this.x = x;
-            this.y = y;
-        }
-
-        public float Length() => new System.Numerics.Vector2(x, y).Length();
-
-        public override string ToString() => $"({x}, {y})";
-
-        public static implicit operator System.Numerics.Vector2(Vector2 v) => new System.Numerics.Vector2(v.x, v.y);
-        public static implicit operator Vector2(System.Numerics.Vector2 v) => new Vector2(v.X, v.Y);
-
-        public static Vector2 operator +(Vector2 a, Vector2 b) => new Vector2(a.x + b.x, a.y + b.y);
-        public static Vector2 operator -(Vector2 a, Vector2 b) => new Vector2(a.x - b.x, a.y - b.y);
-        public static Vector2 operator *(Vector2 v, float s) => new Vector2(v.x * s, v.y * s);
-        public static Vector2 operator /(Vector2 v, float s) => new Vector2(v.x / s, v.y / s);
-    }
-    
-    [Obsolete("Use System.Numerics.Vector3 instead")]
-    public struct Vector3
+    public class Vector3
     {
         public float x;
         public float y;
@@ -42,17 +13,146 @@ namespace Cove.GodotFormat
             this.z = z;
         }
 
-        public float Length() => new System.Numerics.Vector3(x, y, z).Length();
+        // Zero vector
+        public static Vector3 zero = new Vector3(0, 0, 0);
 
-        public override string ToString() => $"({x}, {y}, {z})";
+        public static Vector3 operator +(Vector3 a, Vector3 b)
+        {
+            return new Vector3(a.x + b.x, a.y + b.y, a.z + b.z);
+        }
 
-        public static implicit operator System.Numerics.Vector3(Vector3 v) => new System.Numerics.Vector3(v.x, v.y, v.z);
-        public static implicit operator Vector3(System.Numerics.Vector3 v) => new Vector3(v.X, v.Y, v.Z);
+        public static Vector3 operator -(Vector3 a, Vector3 b)
+        {
+            return new Vector3(a.x - b.x, a.y - b.y, a.z - b.z);
+        }
 
-        public static Vector3 operator +(Vector3 a, Vector3 b) => new Vector3(a.x + b.x, a.y + b.y, a.z + b.z);
-        public static Vector3 operator -(Vector3 a, Vector3 b) => new Vector3(a.x - b.x, a.y - b.y, a.z - b.z);
-        public static Vector3 operator *(Vector3 v, float s) => new Vector3(v.x * s, v.y * s, v.z * s);
-        public static Vector3 operator /(Vector3 v, float s) => new Vector3(v.x / s, v.y / s, v.z / s);
+        public static Vector3 operator *(Vector3 a, float scalar)
+        {
+            return new Vector3(a.x * scalar, a.y * scalar, a.z * scalar);
+        }
+
+        public static Vector3 operator /(Vector3 a, float scalar)
+        {
+            if (scalar == 0)
+            {
+                throw new DivideByZeroException("Cannot divide by zero.");
+            }
+            return new Vector3(a.x / scalar, a.y / scalar, a.z / scalar);
+        }
+
+        public static float Dot(Vector3 a, Vector3 b)
+        {
+            return a.x * b.x + a.y * b.y + a.z * b.z;
+        }
+
+        public static Vector3 Cross(Vector3 a, Vector3 b)
+        {
+            return new Vector3(
+                a.y * b.z - a.z * b.y,
+                a.z * b.x - a.x * b.z,
+                a.x * b.y - a.y * b.x
+            );
+        }
+
+        public float Magnitude()
+        {
+            return (float)Math.Sqrt(x * x + y * y + z * z);
+        }
+
+        public Vector3 Normalized()
+        {
+            float magnitude = Magnitude();
+            if (magnitude == 0)
+            {
+                throw new InvalidOperationException("Cannot normalize a zero vector.");
+            }
+            return this / magnitude;
+        }
+
+        public override string ToString()
+        {
+            return $"({x}, {y}, {z})";
+        }
+    }
+
+    public class Vector2
+    {
+        public float x;
+        public float y;
+
+        public Vector2(float x, float y)
+        {
+            this.x = x;
+            this.y = y;
+        }
+
+        public static Vector2 zero = new Vector2(0, 0);
+
+        public float Magnitude()
+        {
+            return (float)Math.Sqrt(x * x + y * y);
+        }
+
+        public Vector2 Normalized()
+        {
+            float magnitude = Magnitude();
+            if (magnitude == 0)
+            {
+                throw new InvalidOperationException("Cannot normalize a zero vector.");
+            }
+            return new Vector2(x / magnitude, y / magnitude);
+        }
+
+        public float Angle()
+        {
+            return (float)Math.Atan2(y, x); // Returns the angle in radians between -π and π
+        }
+
+        public float AngleInDegrees()
+        {
+            return Angle() * (180f / (float)Math.PI); // Converts the angle from radians to degrees
+        }
+
+        public Vector2 Rotate(float angle)
+        {
+            float cosTheta = (float)Math.Cos(angle);
+            float sinTheta = (float)Math.Sin(angle);
+
+            float newX = x * cosTheta - y * sinTheta;
+            float newY = x * sinTheta + y * cosTheta;
+
+            return new Vector2(newX, newY);
+        }
+
+        public Vector2 RotateInDegrees(float angleDegrees)
+        {
+            float angleRadians = angleDegrees * ((float)Math.PI / 180f); // Convert degrees to radians
+            return Rotate(angleRadians);
+        }
+
+        public static Vector2 operator *(Vector2 a, float scalar)
+        {
+            return new Vector2(a.x * scalar, a.y * scalar);
+        }
+
+        public override string ToString()
+        {
+            return $"({x}, {y})";
+        }
+
+        public override bool Equals(object? obj)
+        {
+            if (obj is Vector2 other)
+            {
+                return x == other.x && y == other.y;
+            }
+            return false;
+        }
+
+        public override int GetHashCode()
+        {
+            return HashCode.Combine(x, y);
+        }
     }
 
     public class Quat

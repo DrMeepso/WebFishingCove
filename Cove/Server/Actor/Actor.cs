@@ -16,7 +16,7 @@
 
 
 using Steamworks;
-using System.Numerics;
+using Cove.GodotFormat;
 
 namespace Cove.Server.Actor
 {
@@ -37,15 +37,15 @@ namespace Cove.Server.Actor
 
         public CSteamID owner = new CSteamID(0); // 0 is the server
 
-        public WFActor(long ID, string Type, Vector3 entPos, Vector3 entRot = default)
+        public WFActor(long ID, string Type, Vector3 entPos, Vector3 entRot = null)
         {
             InstanceID = ID;
             this.Type = Type;
             pos = entPos;
-            if (entRot != default)
+            if (entRot != null)
                 rot = entRot;
             else
-                rot = Vector3.Zero;
+                rot = Vector3.zero;
         }
 
         public virtual void onUpdate()

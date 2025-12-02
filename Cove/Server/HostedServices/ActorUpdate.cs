@@ -18,7 +18,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Numerics;
+using Cove.GodotFormat;
 using Cove.Server.Actor;
 using Cove.Server.Plugins;
 using Microsoft.Extensions.Hosting;
@@ -77,7 +77,7 @@ namespace Cove.Server.HostedServices
 
                         if (!pastTransforms.ContainsKey(actor.InstanceID))
                         {
-                            pastTransforms[actor.InstanceID] = Vector3.Zero;
+                            pastTransforms[actor.InstanceID] = Vector3.zero;
                         }
 
                         if (actor.pos != pastTransforms[actor.InstanceID] || (updateI == idelUpdateCount))

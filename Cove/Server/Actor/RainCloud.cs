@@ -13,7 +13,14 @@
    See the License for the specific language governing permissions and
    limitations under the License.
 */
-using System.Numerics;
+
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using Cove.GodotFormat;
 
 namespace Cove.Server.Actor
 {
@@ -25,23 +32,22 @@ namespace Cove.Server.Actor
 
         public bool isStaic = false;
 
-        public RainCloud(int ID, Vector3 entPos) : base(ID, "raincloud", Vector3.Zero)
+        public RainCloud(int ID, Vector3 entPos) : base(ID, "raincloud", Vector3.zero)
         {
             pos = entPos;
 
-            toCenter = Vector3.Normalize(pos - new Vector3(30, 40, -50));
-            wanderDirection = MathF.Atan2(toCenter.X, toCenter.Z);
+            toCenter = (pos - new Vector3(30, 40, -50)).Normalized();
+            wanderDirection = new Vector2(toCenter.x, toCenter.z).Angle();
             despawn = true;
             despawnTime = 540;
         }
 
         public override void onUpdate()
         {
-            if (isStaic) return; // for rain that wont move
-            
-            float newX = -MathF.Cos(wanderDirection);
-            float newY = -MathF.Sin(wanderDirection);
-            pos -= new Vector3(newX, 0, newY) * (0.17f / 6f);
+            if (isStaic) return; // for rain that dont move
+
+            Vector2 dir = new Vector2(-1, 0).Rotate(wanderDirection) * (0.17f / 6f);
+            pos += new Vector3(dir.x, 0, dir.y);
         }
     }
 }
