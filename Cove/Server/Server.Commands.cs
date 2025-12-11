@@ -186,12 +186,58 @@ namespace Cove.Server
                     messagePlayer($"Banned {playerToBan.Username}", player.SteamId);
                     messageGlobal($"{playerToBan.Username} has been banned from the server.");
                 }
-            });
+                }
+            );
             SetCommandDescription("ban", "Bans a player from the server");
 
-            RegisterCommand(command:"prev", aliases: ["recent"], cb: (player, args) =>
+            RegisterCommand(
+                "unban",
+                (sender, args) =>
+                {
+                    var forgivenPlayer = args[0];
+                    if (args.Length < 1)
+                    {
+                        messagePlayer("Command usage: !unban STEAM_ID", sender.SteamId);
+                        return;
+                    }
+                    if (
+                        !System.Text.RegularExpressions.Regex.IsMatch(
+                            forgivenPlayer,
+                            @"^7656119\d{10}$"
+                        )
+                    )
+                    {
+                        messagePlayer($"Invalid Steam ID: {forgivenPlayer}", sender.SteamId);
+                    }
+                    else
+                    {
+                        CSteamID steamId = new CSteamID(Convert.ToUInt64(forgivenPlayer));
+                        var player = new WFPlayer(
+                            steamId,
+                            Steamworks.SteamFriends.GetFriendPersonaName(steamId),
+                            new SteamNetworkingIdentity()
+                        );
+                        if (isPlayerBanned(steamId))
+                        {
+                            unbanPlayer(steamId);
+                            messageGlobal($"{player.Username} is forgiven and no longer banned.");
+                        }
+                        else
+                        {
+                            messagePlayer("That player isn't banned!", sender.SteamId);
+                        }
+                    }
+                }
+            );
+            SetCommandDescription("unban", "Removes a player (by Steam ID) from the ban list");
+
+            RegisterCommand(
+                command: "prev",
+                aliases: ["recent"],
+                cb: (player, args) =>
             {
-                if (!isPlayerAdmin(player.SteamId)) return;
+                    if (!isPlayerAdmin(player.SteamId))
+                        return;
                 var sb = new StringBuilder();
                 sb.AppendLine("Previous Players:");
                 foreach (var prevPlayer in PreviousPlayers)

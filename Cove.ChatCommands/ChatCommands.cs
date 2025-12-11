@@ -257,6 +257,37 @@ public class ChatCommands : CovePlugin
             }
             SendPlayerChatMessage(player, $"{plr.Username}: {plr.FisherID} - SteamID: {plr.SteamId.m_SteamID}");
         });
+
+        RegisterCommand(
+            command: "joinmessage",
+            aliases: ["motd", "joinmsg"],
+            callback: (player, args) =>
+            {
+                if (!IsPlayerAdmin(player))
+                {
+                    SendPlayerChatMessage(
+                        player,
+                        Server.displayJoinMessage ? Server.joinMessage : "Message not set!"
+                    );
+                }
+                else if (args.Length == 0)
+                {
+                    SendPlayerChatMessage(
+                        player,
+                        $"""{Server.joinMessage}{(Server.displayJoinMessage ? "" : "(DISABLED)")}"""
+                    );
+                }
+                else
+                {
+                    Server.joinMessage = string.Join(" ", args);
+                    SendPlayerChatMessage(
+                        player,
+                        $"Successfully updated the message: {Server.joinMessage}"
+                    );
+                }
+            }
+        );
+        SetCommandDescription("joinmessage", "Show OR set the lobby's join message");
     }
 
     private List<WFPlayer> lastToUseChalk = new();
@@ -291,6 +322,7 @@ public class ChatCommands : CovePlugin
         UnregisterCommand("spawn");
         UnregisterCommand("kick");
         UnregisterCommand("ban");
+        UnregisterCommand("unban");
         UnregisterCommand("setjoinable");
         UnregisterCommand("refreshadmins");
         UnregisterCommand("uptime");
@@ -299,5 +331,6 @@ public class ChatCommands : CovePlugin
         UnregisterCommand("reload");
         UnregisterCommand("plugins");
         UnregisterCommand("steam");
+        UnregisterCommand("joinmessage");
     }
 }
