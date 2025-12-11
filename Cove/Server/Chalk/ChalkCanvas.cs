@@ -6,8 +6,8 @@ namespace Cove.Server.Chalk
     public class ChalkCanvas
     {
         public long canvasID;
-        public CoveServer server;
-        public Dictionary<Vector2, long> chalkImage = new Dictionary<Vector2, long>();
+        private readonly CoveServer server;
+        private Dictionary<Vector2, long> chalkImage = new Dictionary<Vector2, long>();
 
         public ChalkCanvas(long canvasID, CoveServer server)
         {
