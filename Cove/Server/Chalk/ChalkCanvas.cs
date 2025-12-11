@@ -7,7 +7,7 @@ namespace Cove.Server.Chalk
     {
         public long canvasID;
         private readonly CoveServer server;
-        private Dictionary<Vector2, long> chalkImage = new Dictionary<Vector2, long>();
+        public readonly Dictionary<Vector2, long> chalkImage = new Dictionary<Vector2, long>();
 
         public ChalkCanvas(long canvasID, CoveServer server)
         {
@@ -66,12 +66,34 @@ namespace Cove.Server.Chalk
         }
 
         /// <summary>
-        /// Update the chalk image on the server.
+        /// Update the chalk canvas image
         /// </summary>
         /// <param name="chalkData">A dictionary containing the chalk data, where each key is an index and each value is a dictionary containing a position (Vector2) and a color (long).</param>
         public void chalkUpdate(Dictionary<int, object> chalkData)
         {
             this.drawChalk(chalkData);
+        }
+
+        /// <summary>
+        /// Copy/paste chalkData onto the chalk canvas
+        /// </summary>
+        /// <param name="chalkData"></param>
+        public void chalkUpdate(Dictionary<Vector2, long> chalkData)
+        {
+            foreach (var transformation in chalkData.ToList())
+            {
+                var position = transformation.Key;
+                var color = transformation.Value;
+                this.drawChalk(
+                    new Dictionary<int, object>
+                    {
+                        {
+                            0,
+                            new Dictionary<int, object> { { 0, position }, { 1, color } }
+                        },
+                    }
+                );
+            }
         }
 
         /// <summary>
