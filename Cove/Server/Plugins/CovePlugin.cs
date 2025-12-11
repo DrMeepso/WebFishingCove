@@ -20,8 +20,17 @@ namespace Cove.Server.Plugins
         public virtual void onUpdate() { }
         // triggered when a player speaks in anyway (exluding / commands)
         public virtual void onChatMessage(WFPlayer sender, string message) { }
+
         // triggered when a player enters the server
+
+        public virtual void onChalkUpdate(
+            WFPlayer? sender,
+            long canvasID,
+            Dictionary<int, object> packet
+        ) { }
+
         public virtual void onPlayerJoin(WFPlayer player) { }
+
         // triggered when a player leaves the server
         public virtual void onPlayerLeave(WFPlayer player) { }
         /// <summary>
