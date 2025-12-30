@@ -75,6 +75,13 @@ namespace Cove.Server.Plugins
         }
 
         // triggered when a player enters the server
+
+        public virtual void onChalkUpdate(
+            WFPlayer? sender,
+            long canvasID,
+            Dictionary<int, object> packet
+        ) { }
+
         public virtual void onPlayerJoin(WFPlayer player) { }
 
         // triggered when a player leaves the server
