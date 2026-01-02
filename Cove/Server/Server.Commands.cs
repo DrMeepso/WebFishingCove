@@ -50,16 +50,18 @@ namespace Cove.Server
 
         public void RegisterDefaultCommands()
         {
-            RegisterCommand("help", (player, args) =>
-            {
-                var sb = new StringBuilder();
-                sb.AppendLine("Commands:");
-                foreach (var cmd in Commands)
+            RegisterCommand(
+                "help",
+                (player, args) =>
                 {
-                    sb.AppendLine($"{cmd.Command} - {cmd.Description}");
+                    string commands = "Commands:";
+                    foreach (var cmd in Commands)
+                    {
+                        commands += "\n" + $"{cmd.Command} - {cmd.Description}";
+                    }
+                    messagePlayer(commands, player.SteamId);
                 }
-                messagePlayer(sb.ToString(), player.SteamId);
-            });
+            );
             SetCommandDescription("help", "Shows all commands");
 
             RegisterCommand(command: "exit", aliases: ["shutdown"], cb: (player, args) =>
