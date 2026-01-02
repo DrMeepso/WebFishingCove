@@ -198,7 +198,7 @@ namespace Cove.Server
                         string Message = (string)packetInfo["message"];
                         bool local = (bool)packetInfo["local"];
                         Vector3 position = (Vector3)packetInfo["position"];
-                        string zone = string(packetInfo["zone"]);
+                        string zone = (string)packetInfo["zone"];
 
                         if (Message.StartsWith("%u:")) // Format for a normal chat message
                         {
