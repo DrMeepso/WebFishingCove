@@ -196,21 +196,23 @@ namespace Cove.Server
                 case "message":
                     {
                         string Message = (string)packetInfo["message"];
+                        bool local = (bool)packetInfo["local"]
+                        Vector3 position = (Vector3)packetInfo["position"]
+                        string zone = string(packetInfo["zone"])
+
                         if (Message.StartsWith("%u:")) // Format for a normal chat message
                         {
-                            string playerMessage = Message.Replace("%u: ", "");
-                            OnPlayerChat(playerMessage, sender);
+                            Message = Message.Replace("%u: ", "");
                         }
-
-                        if (Message.StartsWith("(%u")) // Format for a /me message
+                        else if (Message.StartsWith("(%u")) // Format for a /me message
                         {
                             // Because it's easier I'm just gonna replace the %u with the player's name
                             // and use that as the message content
                             var thisPlayer = AllPlayers.Find(p => p.SteamId.m_SteamID == sender.m_SteamID);
                             if (thisPlayer == null) return;
-                            string playerMessage = Message.Replace("%u", thisPlayer.Username);
-                            OnPlayerChat(playerMessage, sender);
+                            Message = Message.Replace("%u", thisPlayer.Username);
                         }
+                        OnPlayerChat(Message, sender, local, position, zone);
                     }
                     break;
             }
