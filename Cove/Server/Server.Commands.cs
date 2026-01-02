@@ -240,28 +240,33 @@ namespace Cove.Server
             {
                     if (!isPlayerAdmin(player.SteamId))
                         return;
-                var sb = new StringBuilder();
-                sb.AppendLine("Previous Players:");
+                    string players = "Previous Players:";
                 foreach (var prevPlayer in PreviousPlayers)
                 {
-                    if (prevPlayer.State == PlayerState.InGame) continue;
+                        if (prevPlayer.State == PlayerState.InGame)
+                            continue;
 
                     // we dont want to show players that left more than 10 minutes ago
-                    if ((DateTime.UtcNow - DateTimeOffset.FromUnixTimeSeconds(prevPlayer.leftTimestamp).UtcDateTime)
-                            .TotalMinutes > 10)
+                        if ((DateTime.UtcNow - DateTimeOffset .FromUnixTimeSeconds(prevPlayer.leftTimestamp) .UtcDateTime).TotalMinutes > 10)
                     {
                         continue;
                     }
 
-                    // get the time since the player left in a human readable format
                     string timeLeft =
                         $"{Math.Round((DateTime.UtcNow - DateTimeOffset.FromUnixTimeSeconds(prevPlayer.leftTimestamp).UtcDateTime).TotalMinutes)} minutes ago";
-                    sb.Append($"{prevPlayer.Username} [{prevPlayer.SteamId.ToString()}] ({prevPlayer.FisherID}) - Left: {timeLeft}\n");
+                        players +=
+                            "\n"
+                            + (
+                                $"{prevPlayer.Username} [{prevPlayer.SteamId.ToString()}] ({prevPlayer.FisherID}) - Left: {timeLeft}\n"
+                            );
                 }
-                messagePlayer(sb.ToString(), player.SteamId);
-            });
-            SetCommandDescription("prev", "Shows a list of previous players that were connected to the server");
-
+                    messagePlayer(players, player.SteamId);
+                }
+            );
+            SetCommandDescription(
+                "prev",
+                "Shows a list of previous players that were connected to the server"
+            );
         }
 
         public void RegisterCommand(string command, Action<WFPlayer, string[]> cb, string[]? aliases = null)
