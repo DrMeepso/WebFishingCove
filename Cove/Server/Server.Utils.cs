@@ -25,6 +25,13 @@ namespace Cove.Server
 {
     partial class CoveServer
     {
+        /// <summary>
+        /// This is about the limit of vanilla chat box length
+        /// FWIW 20k is about the actual network packet limit
+        /// So, this could be higher *but* that requires modding of the receipient's client
+        /// </summary>
+        public const int MAX_MESSAGE_SIZE = 480; // Approximate
+
         public void readAdmins()
         {
             Dictionary<string, string> config = ConfigReader.ReadConfig("admins.cfg");
@@ -248,41 +255,40 @@ namespace Cove.Server
 
         public void messageGlobal(string msg, string color = "ffffff")
         {
-            Dictionary<string, object> chatPacket = new();
-            chatPacket["type"] = "message";
-            chatPacket["message"] = msg;
-            chatPacket["color"] = color;
-            chatPacket["local"] = false;
-            chatPacket["position"] = new Vector3(0f, 0f, 0f);
-            chatPacket["zone"] = "main_zone";
-            chatPacket["zone_owner"] = 1;
-
-            // get all players in the lobby
             foreach (CSteamID member in getAllPlayers())
             {
-                if (member.m_SteamID == SteamUser.GetSteamID().m_SteamID) continue;
-                sendPacketToPlayer(chatPacket, member);
+                if (member.m_SteamID == SteamUser.GetSteamID().m_SteamID)
+                    continue;
+                messagePlayer(msg, member, color);
             }
         }
 
         public void messagePlayer(string msg, CSteamID id, string color = "ffffff")
         {
-            Dictionary<string, object> chatPacket = new();
-            chatPacket["type"] = "message";
-            chatPacket["message"] = msg;
-            chatPacket["color"] = color;
-            chatPacket["local"] = (bool)false;
-            chatPacket["position"] = new Vector3(0f, 0f, 0f);
-            chatPacket["zone"] = "main_zone";
-            chatPacket["zone_owner"] = 1;
-
-            if (id.m_SteamID == SteamUser.GetSteamID().m_SteamID)
+            List<string> messages = [];
+            for (int i = 0; i < msg.Length; i += MAX_MESSAGE_SIZE)
             {
-                Log($"{msg}");
-                return;
+                messages.Add(msg.Substring(i, Math.Min(MAX_MESSAGE_SIZE, msg.Length - i)));
             }
+            foreach (var message in messages)
+            {
+                Dictionary<string, object> chatPacket = new();
+                chatPacket["type"] = "message";
+                chatPacket["message"] = message;
+                chatPacket["color"] = color;
+                chatPacket["local"] = false;
+                chatPacket["position"] = new Vector3(0f, 0f, 0f);
+                chatPacket["zone"] = "main_zone";
+                chatPacket["zone_owner"] = 1;
 
-            sendPacketToPlayer(chatPacket, id);
+                if (id.m_SteamID == SteamUser.GetSteamID().m_SteamID)
+                {
+                    Log($"{message}");
+                    return;
+                }
+
+                sendPacketToPlayer(chatPacket, id);
+            }
         }
 
         public void setActorZone(WFActor instance, string zoneName, int zoneOwner)

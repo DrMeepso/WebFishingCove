@@ -18,51 +18,63 @@ public class ChatCommands : CovePlugin
     {
         base.onInit();
 
-        RegisterCommand(command: "users", aliases: ["players"], callback: (player, args) =>
-        {
-            if (!IsPlayerAdmin(player)) return;
-            // Get the command arguments
-            int pageNumber = 1;
-            int pageSize = 10;
-
-            // Arg[0] = page
-            if (args.Length > 0 && (!int.TryParse(args[0], out pageNumber) || pageNumber < 1))
-                pageNumber = 1;
-            
-            // Arg[1] = page size (optional)
-            if (args.Length > 1 && int.TryParse(args[1], out int customSize) && customSize > 0 && customSize <= 100)
-                pageSize = customSize;
-            
-            var allPlayers = GetAllPlayers()
-                .OrderBy(p => p.Username, StringComparer.OrdinalIgnoreCase)
-                .ThenBy(p => p.FisherID, StringComparer.OrdinalIgnoreCase)
-                .ToList();
-            int totalPlayers = allPlayers.Count;
-            if (totalPlayers == 0)
+        RegisterCommand(
+            command: "users",
+            aliases: ["players"],
+            callback: (player, args) =>
             {
-                // server only response
-                SendPlayerChatMessage(player, "No players online.");
-                return;
+                if (!IsPlayerAdmin(player))
+                    return;
+                // Get the command arguments
+                int pageNumber = 1;
+                int pageSize = 10;
+
+                // Arg[0] = page
+                if (args.Length > 0 && (!int.TryParse(args[0], out pageNumber) || pageNumber < 1))
+                    pageNumber = 1;
+
+                // Arg[1] = page size (optional)
+                if (
+                    args.Length > 1
+                    && int.TryParse(args[1], out int customSize)
+                    && customSize > 0
+                    && customSize <= 100
+                )
+                    pageSize = customSize;
+
+                var allPlayers = GetAllPlayers()
+                    .OrderBy(p => p.Username, StringComparer.OrdinalIgnoreCase)
+                    .ThenBy(p => p.FisherID, StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+                int totalPlayers = allPlayers.Count;
+                if (totalPlayers == 0)
+                {
+                    // server only response
+                    SendPlayerChatMessage(player, "No players online.");
+                    return;
+                }
+
+                int totalPages = (int)Math.Ceiling(totalPlayers / (double)pageSize);
+                if (totalPages == 0)
+                    totalPages = 1; // safety
+
+                // Ensure the page number is within the valid range
+                if (pageNumber > totalPages)
+                    pageNumber = totalPages;
+                if (pageNumber < 1)
+                    pageNumber = 1;
+
+                int skip = (pageNumber - 1) * pageSize;
+                var playersOnPage = allPlayers.Skip(skip).Take(pageSize);
+
+                string players = "Players in the server:\n";
+                foreach (var p in playersOnPage)
+                    players += $"{p.Username}: {p.FisherID}\n";
+
+                players += $"Page {pageNumber} of {totalPages} (Total: {totalPlayers})";
+                SendPlayerChatMessage(player, players);
             }
-            
-            int totalPages = (int)Math.Ceiling(totalPlayers / (double)pageSize);
-            if (totalPages == 0) totalPages = 1; // safety
-            
-            // Ensure the page number is within the valid range
-            if (pageNumber > totalPages) pageNumber = totalPages;
-            if (pageNumber < 1) pageNumber = 1;
-
-            int skip = (pageNumber - 1) * pageSize;
-            var playersOnPage = allPlayers.Skip(skip).Take(pageSize);
-            
-            var sb = new System.Text.StringBuilder();
-            sb.AppendLine("Players in the server:");
-            foreach (var p in playersOnPage)
-                sb.AppendLine($"{p.Username}: {p.FisherID}");
-
-            sb.Append($"Page {pageNumber} of {totalPages} (Total: {totalPlayers})");
-            SendPlayerChatMessage(player, sb.ToString());
-        });
+        );
         SetCommandDescription("users", "Shows all players in the server");
 
         RegisterCommand("spawn", (player, args) =>
