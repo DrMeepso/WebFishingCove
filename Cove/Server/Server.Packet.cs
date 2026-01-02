@@ -196,9 +196,9 @@ namespace Cove.Server
                 case "message":
                     {
                         string Message = (string)packetInfo["message"];
-                        bool local = (bool)packetInfo["local"]
-                        Vector3 position = (Vector3)packetInfo["position"]
-                        string zone = string(packetInfo["zone"])
+                        bool local = (bool)packetInfo["local"];
+                        Vector3 position = (Vector3)packetInfo["position"];
+                        string zone = string(packetInfo["zone"]);
 
                         if (Message.StartsWith("%u:")) // Format for a normal chat message
                         {
