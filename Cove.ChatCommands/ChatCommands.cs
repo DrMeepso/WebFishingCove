@@ -303,19 +303,31 @@ public class ChatCommands : CovePlugin
     }
 
     private List<WFPlayer> lastToUseChalk = new();
+
     public override void onNetworkPacket(WFPlayer sender, Dictionary<string, object> packet)
     {
         base.onNetworkPacket(sender, packet);
 
-        object value;
-        if (packet.TryGetValue("type", out value))
+        if (packet.TryGetValue("type", out object? value))
         {
-            if (typeof(string) != value.GetType()) return;
+            if (value.GetType() != typeof(string))
+            {
+                // ???
+                return;
+            }
+            var type = (string)value;
 
-            string type = value as string;
             if (type == "chalk_packet")
             {
+                // Avoid duplicating chalk authors to mitigate spam
+                var prevUserRecord = lastToUseChalk.IndexOf(sender);
+                if (prevUserRecord > -1)
+                {
+                    lastToUseChalk.RemoveAt(prevUserRecord);
+                }
+
                 lastToUseChalk.Add(sender);
+
                 if (lastToUseChalk.Count > 10)
                 {
                     lastToUseChalk.RemoveAt(0);
