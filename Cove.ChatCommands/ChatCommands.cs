@@ -300,9 +300,61 @@ public class ChatCommands : CovePlugin
             }
         );
         SetCommandDescription("joinmessage", "Show OR set the lobby's join message");
+
+        RegisterCommand(
+            command: "wipe",
+            aliases: ["scrub", "clean"],
+            callback: (player, args) =>
+            {
+                if (!IsPlayerAdmin(player))
+                    return;
+
+                if (args.Length == 0)
+                {
+                    SendPlayerChatMessage(player, "Usage: !wipe ( 0 | 1 | 2 | 3 | all )");
+                    return;
+                }
+
+                if (args[0] == "all" || args[0] == "*")
+                {
+                    foreach (var canvas in Server.chalkCanvas)
+                    {
+                        var t = Task.Run(
+                            async delegate
+                            {
+                                canvas.clearCanvas();
+                                // Throttle to mitigate clients' packet load in case canvas has a lot of chalk
+                                await Task.Delay(1000);
+                            }
+                        );
+                        t.Wait();
+                    }
+                    SendPlayerChatMessage(player, "Chalk canvases wiped ✓️");
+                }
+                else
+                {
+                    var canvasID = int.Parse(args[0]);
+                    Cove.Server.Chalk.ChalkCanvas? canvas = Server.chalkCanvas.Find(c =>
+                        c.canvasID == canvasID
+                    );
+                    if (canvas == null)
+                    {
+                        SendPlayerChatMessage(player, $"Invalid canvas ID {canvasID}!");
+                        return;
+                    }
+                    canvas.clearCanvas();
+                    SendPlayerChatMessage(player, $"Canvas {canvasID} wiped ✓");
+                }
+            }
+        );
+        SetCommandDescription(
+            "wipe",
+            "Fully erase a chalk canvas | Usage: !wipe [optional_canvas_ID]"
+        );
     }
 
     private List<WFPlayer> lastToUseChalk = new();
+
     public override void onNetworkPacket(WFPlayer sender, Dictionary<string, object> packet)
     {
         base.onNetworkPacket(sender, packet);

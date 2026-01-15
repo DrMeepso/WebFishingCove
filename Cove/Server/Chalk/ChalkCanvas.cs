@@ -3,6 +3,18 @@ using Vector2 = Cove.GodotFormat.Vector2;
 
 namespace Cove.Server.Chalk
 {
+    internal enum COLOR : long
+    {
+        BLACK,
+        WHITE,
+        RED,
+        BLUE,
+        YELLOW,
+        SPECIAL,
+        GREEN,
+        NONE = -1,
+    };
+
     public class ChalkCanvas
     {
         public long canvasID;
@@ -113,10 +125,23 @@ namespace Cove.Server.Chalk
             );
         }
 
-        public void clearCanvas()
+        /// <summary>
+        /// Clear the chalk canvas
+        /// </summary>
+        /// <param name="emitChanges">Whether to emit the changes to players. Default: true</param>
+        public void clearCanvas(bool emitChanges = true)
         {
+            if (emitChanges)
+        {
+                var transformations = getChalkPacket();
+                for (int i = 0; i < transformations.Count; i++)
+                {
+                    var cell = (Dictionary<int, object>)transformations[i];
+                    cell[1] = COLOR.NONE;
+                }
+                drawChalk(transformations);
+            }
             chalkImage.Clear();
-            // TODO: Emit changes
         }
     }
 }
