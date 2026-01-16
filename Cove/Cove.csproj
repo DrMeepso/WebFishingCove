@@ -49,4 +49,8 @@
 
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="worlds\" />
+  </ItemGroup>
+
 </Project>
