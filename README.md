@@ -1,5 +1,5 @@
 ﻿> [!NOTE]  
-> It works :D
+> 🐟
 
 # Webfishing Cove
 Cove is a dedicated server for WebFishing written in C#!
@@ -69,7 +69,3 @@ Some default / popular plugins can be found in the [CovePlugins](https://github.
 The repo for a template plugin can be found here: [CovePluginTemplate](https://github.com/DrMeepso/TemplateCovePlugin)
 
 More plugins can be found in the discord server for cove listed above!
-
-[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/E1E0E65CR)
-
-All donations are greatly appreciated!!!!!!!! <3 :3
