@@ -44,22 +44,17 @@ If you have any questions or issues with Cove, **create and issue on Github** or
 	- A new build is made everytime code is changed so it may update quite alot!
 	- Also make sure you have the .net8 runtime installed, you can download it [here](https://dotnet.microsoft.com/en-us/download/dotnet/8.0)
 
-2. Decompile WebFishing
-	- Once you have the source files drag the `main_zone.tscn` file into the `/worlds` folder of the server!
-	- The `main_zone.tscn` file can be found here in the WebFishing project `/Scenes/Map`
-	- You can use [gdsdecomp](https://github.com/bruvzg/gdsdecomp) to decompile a Godot project (WebFishing)
-
-3. Change settings
+2. Change settings
 	- If you dont see the config files (server.cfg & admins.cfg) run the server once and they should be created in the same place the application is!
 	- You can modify the settings in the server.cgf file with all the info you want!
 	- Too add a admin put there Steam64ID in the admins.cfg file with a ` = true` after it!
 	- I.E. `76561198288728683 = true`
 
-4. Run!
+3. Run!
 	- Run the server and enjoy! 
 	- Please be respectful and dont name the servers anything stupid!
 
-5. Look below
+4. Look below
 	- Links if you wanna find plugins or make them are below!
 	 
 # Other info

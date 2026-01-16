@@ -96,7 +96,11 @@ namespace Cove.Server
             string worldFile = $"{AppDomain.CurrentDomain.BaseDirectory}worlds/main_zone.tscn";
             if (!File.Exists(worldFile))
             {
-                await DownloadWorldFile();
+                var res = await DownloadWorldFile();
+                if (!res)
+                {
+                    Error("Failed to download main_zone.tscn!");
+                }
             }
 
             string banFile = $"{AppDomain.CurrentDomain.BaseDirectory}bans.txt";
