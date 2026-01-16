@@ -84,7 +84,7 @@ namespace Cove.Server
 
         public List<PreviousPlayer> PreviousPlayers = new();
         
-        public void Init()
+        public async void Init()
         {
             cbThread = new(runSteamworksUpdate);
             cbThread.Name = "Steamworks Callback Thread";
@@ -96,15 +96,11 @@ namespace Cove.Server
             string worldFile = $"{AppDomain.CurrentDomain.BaseDirectory}worlds/main_zone.tscn";
             if (!File.Exists(worldFile))
             {
-                Log("-- ERROR --");
-                Log("main_zone.tscn is missing!");
-                Log("please put a world file in the /worlds folder so the server may load it!");
-                Log("-- ERROR --");
-                Log("Press any key to exit");
-
-                Console.ReadKey();
-
-                return;
+                var res = await DownloadWorldFile();
+                if (!res)
+                {
+                    Error("Failed to download main_zone.tscn!");
+                }
             }
 
             string banFile = $"{AppDomain.CurrentDomain.BaseDirectory}bans.txt";
@@ -664,6 +660,38 @@ namespace Cove.Server
             }
         }
 
+        async Task<bool> DownloadWorldFile()
+        {
+            
+            Log("Downloading main_zone.tscn file");
+
+            string downloadURL =
+                "https://raw.githubusercontent.com/Blizzardfur-Maxxx/Webfishing-Decompiled/refs/heads/main/Scenes/Map/Zones/main_zone.tscn";
+            string worldDir = $"{AppDomain.CurrentDomain.BaseDirectory}worlds";
+            HttpClient client = new();
+
+            Directory.CreateDirectory(worldDir); // make the directory just in case.
+            
+            try
+            {
+                var resp = await client.GetAsync(downloadURL);
+                var fstream = File.Create(worldDir+"/main_zone.tscn");
+                var body = await resp.Content.ReadAsStringAsync();
+                
+                await fstream.WriteAsync(Encoding.UTF8.GetBytes(body));
+                fstream.Flush();
+                fstream.Close();
+                
+                Log("zone file downloaded!");
+                return true;
+            }
+            catch (HttpRequestException e)
+            {
+                Error(e.ToString());
+                return false;
+            }
+        }
+        
         void Log(string value)
         {
             logger.Information(value);
@@ -673,5 +701,7 @@ namespace Cove.Server
         {
             logger.Error(value);
         }
+        
+        
     }
 }
