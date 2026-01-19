@@ -1,66 +1,70 @@
 ﻿> [!NOTE]  
 > 🐟
 
+it doesn't require Godot or anything other than Steamworks.
+
 # Webfishing Cove
-Cove is a dedicated server for WebFishing written in C#!
 
-Cove is a implementation of the WebFishing network protocall in a CLI meaning it dosent require Godot or anything other than Steamworks!
+Cove is a dedicated server for WebFishing written in C#.
 
-# Fetures
-* Lightweight and Fast - Because of the lightweight nature of the server it can run with less than 1gb of ram with 20+ players on the server!
-* Moderation - Moderation is built into the Cove.Chatcommands plugin that cames bundled with the server!
-* Plugins - Plugins have full access to the internal server class allowing for extreme customisation!
-* .Net - Cove is written in C# on the dotnet framework, making plugin development easy, fast and accessible!
-* Support - Cove has a discord server for fast support for anything related to cove (including plugin development)
+# Features
+
+- Lightweight and fast – Because of the lightweight nature of the server, it can run with less than 1 GB of RAM with 20+ players.
+- Moderation – Moderation is built into the Cove.ChatCommands plugin bundled with the server.
+- Plugins – Plugins have full access to the internal server classes, allowing for extreme customization.
+- .NET – Cove is written in C# on the .NET framework, making plugin development easy, fast, and accessible.
+- Support – Cove has a Discord server for fast support for anything related to Cove (including plugin development).
 
 # How it works
-Cove uses none of WebFishing's code, insted it used C# to emulate the same network calls that the offical game would make to host a lobby!
 
-Things like event spawning all had to be written from scratch to allow for the portability of C#!
+Cove uses none of WebFishing's code. Instead, it uses C# to emulate the same network calls that the official game makes to host a lobby.
 
-Because of this emulation to run the server you must run it from a steam account that owns the game and that has steam open in the background
+Things like event spawning all had to be written from scratch to allow for the portability of C#.
 
-If you have any questions or issues with Cove, **create and issue on Github** or join the [**Discord Server**](https://discord.gg/QfydV2Ze8f)
+Because of this emulation, to run the server you must use a Steam account that owns the game and has Steam open in the background.
+
+If you have any questions or issues with Cove, **create an issue on GitHub** or join the [**Discord Server**](https://discord.gg/QfydV2Ze8f).
 
 # Todo
-- [X] Spawn actors required for the metal detector
-- [X] Improve error handling
-- [X] Some sort of plugin or modding support (C# API)
-- [X] Add proper support for actor handling
-- [X] Make hostspawn and metalspawn IHostedService's
-- [X] Write a plugin guide / how to create plugins, can be found here [Plugins.md](./Plugins.md)
 
-# How to run:
+- [x] Spawn actors required for the metal detector
+- [x] Improve error handling
+- [x] Add plugin / modding support (C# API)
+- [x] Add proper support for actor handling
+- [x] Make hostspawn and metalspawn IHostedService instances
+- [x] Write a plugin guide / how to create plugins (can be found here: [Plugins.md](./Plugins.md))
+
+# How to run
 
 > [!NOTE]  
-> To run a server you must have Steam open on the computer you wish to run the server on
-> and Steam must be logged into a account that has WebFishing in it's library 
-> 
-> Also please note you can't join the server on the account you are hosting it on!
+> To run a server, you must have Steam open on the computer you wish to run the server on,  
+> and Steam must be logged into an account that has WebFishing in its library.
+>
+> Also note that you can't join the server on the same account that is hosting it.
 
 1. Download
-	- You can download the most recent version of the server here: [Nightly Releases](https://github.com/DrMeepso/WebFishingCove/tags)
-	- Or if you want the latest stable version it is here: [Latest Release](https://github.com/DrMeepso/WebFishingCove/releases/latest)
-	- A new build is made everytime code is changed so it may update quite alot!
-	- Also make sure you have the .net8 runtime installed, you can download it [here](https://dotnet.microsoft.com/en-us/download/dotnet/8.0)
+   - You can download the most recent version of the server here: [Nightly Releases](https://github.com/DrMeepso/WebFishingCove/tags)
+   - Or, if you want the latest stable version, it is here: [Latest Release](https://github.com/DrMeepso/WebFishingCove/releases/latest)
+   - A new build is made every time the code is changed, so it may update quite often.
+   - Also make sure you have the .NET 8 runtime installed. You can download it [here](https://dotnet.microsoft.com/en-us/download/dotnet/8.0).
 
 2. Change settings
-	- If you dont see the config files (server.cfg & admins.cfg) run the server once and they should be created in the same place the application is!
-	- You can modify the settings in the server.cgf file with all the info you want!
-	- Too add a admin put there Steam64ID in the admins.cfg file with a ` = true` after it!
-	- I.E. `76561198288728683 = true`
+   - If you don’t see the config files (`server.cfg` & `admins.cfg`), run the server once and they should be created in the same directory as the application.
+   - You can modify the settings in the `server.cfg` file with all the information you want.
+   - To add an admin, put their Steam64 ID in the `admins.cfg` file with `= true` after it.
+   - Example: `76561198288728683 = true`
 
-3. Run!
-	- Run the server and enjoy! 
-	- Please be respectful and dont name the servers anything stupid!
+3. Run
+   - Run the server and enjoy.
+   - Please be respectful and don’t name the server anything stupid.
 
 4. Look below
-	- Links if you wanna find plugins or make them are below!
-	 
+   - Links for finding or creating plugins are below.
+
 # Other info
 
-Some default / popular plugins can be found in the [CovePlugins](https://github.com/DrMeepso/CovePlugins) repo
+Some default / popular plugins can be found in the [CovePlugins](https://github.com/DrMeepso/CovePlugins) repo.
 
-The repo for a template plugin can be found here: [CovePluginTemplate](https://github.com/DrMeepso/TemplateCovePlugin)
+The repository for a template plugin can be found here: [CovePluginTemplate](https://github.com/DrMeepso/TemplateCovePlugin).
 
-More plugins can be found in the discord server for cove listed above!
+More plugins can be found in the Cove Discord server listed above.
