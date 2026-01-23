@@ -152,7 +152,7 @@ namespace Cove.Server
                 previousPlayer = PreviousPlayers.ToList().Find(p => $"#{p.FisherID}".Equals(playerIdent, StringComparison.OrdinalIgnoreCase));
                 if (previousPlayer != null)
                 {
-                    playerToBan = new WFPlayer(previousPlayer.SteamId, previousPlayer.Username, new SteamNetworkingIdentity())
+                    playerToBan = new WFPlayer(previousPlayer.SteamId, new SteamNetworkingIdentity())
                     {
                         FisherID = previousPlayer.FisherID,
                         Username = previousPlayer.Username,
@@ -216,7 +216,6 @@ namespace Cove.Server
                         CSteamID steamId = new CSteamID(Convert.ToUInt64(forgivenPlayer));
                         var player = new WFPlayer(
                             steamId,
-                            Steamworks.SteamFriends.GetFriendPersonaName(steamId),
                             new SteamNetworkingIdentity()
                         );
                         if (isPlayerBanned(steamId))

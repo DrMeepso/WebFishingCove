@@ -44,14 +44,11 @@ namespace Cove.Server.Actor
         private string overrideUsername = ""; // for if we need to override a players username
         public List<CSteamID> blockedPlayers = new List<CSteamID>();
         public SteamNetworkingIdentity identity;
-        public WFPlayer(CSteamID id, string fisherName, SteamNetworkingIdentity identity) : base(0, "player", Vector3.zero)
+        public WFPlayer(CSteamID id, SteamNetworkingIdentity identity) : base(0, "player", Vector3.zero)
         {
             SteamId = id;
             string randomID = new string(Enumerable.Range(0, 3).Select(_ => "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"[new Random().Next(36)]).ToArray());
             FisherID = randomID;
-            
-            if (fisherName != "")
-                overrideUsername = fisherName;
 
             owner = id;
 
