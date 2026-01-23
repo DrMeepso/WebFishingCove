@@ -13,3 +13,4 @@ bin/
 WFServer/worlds/main_zone.tscn
 Cove/worlds/main_zone.tscn
 /.idea
+CoveServer.sln.DotSettings.user
