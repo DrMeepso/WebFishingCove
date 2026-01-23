@@ -246,7 +246,7 @@ namespace Cove.Server
                 return;
             }
 
-            serverPlayer = new WFPlayer(SteamUser.GetSteamID(), SteamFriends.GetPersonaName(), new SteamNetworkingIdentity());
+            serverPlayer = new WFPlayer(SteamUser.GetSteamID(), new SteamNetworkingIdentity()) { Username = SteamFriends.GetPersonaName() };
 
             // thread for running steamworks callbacks
             cbThread.IsBackground = true;
@@ -480,7 +480,7 @@ namespace Cove.Server
                         bool suc = SteamMatchmaking.SendLobbyChatMsg(new CSteamID(callback.m_ulSteamIDLobby), acceptData, acceptData.Count());
 
                         // make the player a wfplayer
-                        WFPlayer player = new WFPlayer(userId, SteamFriends.GetFriendPersonaName(userId), new SteamNetworkingIdentity());
+                        WFPlayer player = new WFPlayer(userId, new SteamNetworkingIdentity());
                         AllPlayers.Add(player);
                         
                         // if there is already a player with the same FisherID, remove them from the previous players list to prevent duplicates

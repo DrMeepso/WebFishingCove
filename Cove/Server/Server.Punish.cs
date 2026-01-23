@@ -33,7 +33,7 @@ namespace Cove.Server
         
         public void banPlayer(CSteamID id, bool saveToFile = false, string banReason = "")
         {
-            var player = new WFPlayer(id, Steamworks.SteamFriends.GetFriendPersonaName(id), new SteamNetworkingIdentity());
+            var player = new WFPlayer(id, new SteamNetworkingIdentity());
 
             Dictionary<string, object> banPacket = new();
             banPacket["type"] = "client_was_banned";
