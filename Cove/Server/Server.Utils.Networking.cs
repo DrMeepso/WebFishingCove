@@ -24,7 +24,7 @@ using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace Cove.Server
 {
-    enum CHANNELS : int
+    public enum CHANNELS : int
     {
         ACTOR_UPDATE,
         ACTOR_ACTION,
@@ -78,7 +78,7 @@ namespace Cove.Server
 
             int channel = packet.TryGetValue("channel", out object? value)
                 ? (int)value
-                : (int)CHANNELS.GAME_STATE;
+                : (int)Server.CHANNELS.GAME_STATE;
 
             SteamNetworkingMessages.SendMessageToUser(
                 ref player.identity,

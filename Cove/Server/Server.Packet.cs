@@ -253,6 +253,7 @@ namespace Cove.Server
                             { "type", "chalk_packet" },
                             { "canvas_id", canvas.canvasID },
                             { "data", chunks[index] },
+                            { "channel", (int)Cove.Server.CHANNELS.CHALK },
                         };
                         sendPacketToPlayer(chalkPacket, recipient);
                         Thread.Sleep(10);
