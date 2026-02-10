@@ -44,7 +44,8 @@ namespace Cove.Server
             {
                 if (player == SteamUser.GetSteamID())
                     continue;
-                
+
+
                 sendPacketToPlayer(packet, player);
             }
         }
@@ -52,7 +53,8 @@ namespace Cove.Server
         public void sendPacketToPlayer(Dictionary<string, object> packet, CSteamID id)
         {
             byte[] packetBytes = writePacket(packet);
-            
+
+
             // get the wfPlayer object
             var player = AllPlayers.Find(p => p.SteamId.m_SteamID == id.m_SteamID);
             if (player == null) return;
@@ -76,7 +78,14 @@ namespace Cove.Server
             // } 
             int channel = packet.ContainsKey("channel") ? (int)packet["channel"] : 2;
 
-            SteamNetworkingMessages.SendMessageToUser(ref player.identity, dataPointer, (uint)packetBytes.Length, 8, 2);
+            SteamNetworkingMessages.SendMessageToUser(
+                ref player.identity,
+                dataPointer,
+                (uint)packetBytes.Length,
+                8,
+                channel
+            );
+
 
             handle.Free(); // free the handle
         }
