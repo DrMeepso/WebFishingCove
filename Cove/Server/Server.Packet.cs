@@ -225,39 +225,8 @@ namespace Cove.Server
                 // send the player all the canvas data
                 foreach (Chalk.ChalkCanvas canvas in chalkCanvas)
                 {
-                    Dictionary<int, object> allChalk = canvas.getChalkPacket();
-
-                    // split the dictionary into chunks of 100
-                    List<Dictionary<int, object>> chunks = new List<Dictionary<int, object>>();
-                    Dictionary<int, object> chunk = new Dictionary<int, object>();
-
-                    int i = 0;
-                    foreach (var kvp in allChalk)
-                    {
-                        if (i >= 1000)
-                        {
-                            chunks.Add(chunk);
-                            chunk = new Dictionary<int, object>();
-                            i = 0;
-                        }
-                        chunk.Add(i, kvp.Value);
-                        i++;
-                    }
-
-                    chunks.Add(chunk);
-
-                    for (int index = 0; index < chunks.Count; index++)
-                    {
-                        Dictionary<string, object> chalkPacket = new Dictionary<string, object>
-                        {
-                            { "type", "chalk_packet" },
-                            { "canvas_id", canvas.canvasID },
-                            { "data", chunks[index] },
-                            { "channel", (int)Cove.Server.CHANNELS.CHALK },
-                        };
-                        sendPacketToPlayer(chalkPacket, recipient);
-                        Thread.Sleep(10);
-                    }
+                    canvas.emitChalk(omitEmptyCells: true, recipient);
+                    Thread.Sleep(500);
                 }
             }
             catch (Exception e)
