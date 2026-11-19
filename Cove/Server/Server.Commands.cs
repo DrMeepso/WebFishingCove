@@ -196,6 +196,9 @@ namespace Cove.Server
                 "unban",
                 (sender, args) =>
                 {
+                    
+                    if (!isPlayerAdmin(sender.SteamId)) return;
+                    
                     var forgivenPlayer = args[0];
                     if (args.Length < 1)
                     {
